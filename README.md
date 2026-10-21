@@ -14,8 +14,8 @@ Open the page through a local server rather than as a file, because the video pl
 |---|---|
 | `index.html` | The whole page: styles in `<style>`, the video player and title-figure scripts at the bottom |
 | `static/images/` | Paper figures, the capabilities figure (`capabilities.png`), institution logos |
-| `static/media/` | Animated Sparse Motion Token figure (`smt_motion.mp4/.webm/.gif`, poster) |
-| `static/videos/` | Episode clips, `segments.json` (annotation / KiRoSe / video-VLM lanes) and the hero background `hero_mosaic.mp4` |
+| `static/media/` | Animated Sparse Motion Token figure (`smt_motion.mp4/.webm/.gif`, poster); reversed-subtask clip and curves (`progress_demo.mp4/.json`) |
+| `static/videos/` | Episode clips, `segments.json` (annotation / KiRoSe / video-VLM lanes), `progress_traces.json` (KiRoSe progress per predicted subtask, title figure) and the unused background `hero_mosaic.mp4` |
 | `tools/` | Scripts that regenerated the media from the experiment outputs (need the private `traj_seg_vlm` data; not needed to edit the page) |
 
 ## Before release
