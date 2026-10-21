@@ -860,19 +860,30 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 (function () {
   var NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('costPlot');
   function el(t, a, txt) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
-  var L = 50, R = 368, T = 26, B = 372, lo = -4, hi = Math.log10(3), ylo = 0.45, yhi = 0.80;
+  var L = 50, R = 368, T = 40, B = 372, lo = Math.log10(6e-5), hi = Math.log10(3), ylo = 0.45, yhi = 0.80;
   var X = function (c) { return L + (R - L) * (Math.log10(c) - lo) / (hi - lo); }, Y = function (v) { return B - (B - T) * (v - ylo) / (yhi - ylo); };
-  [1e-4, 1e-3, 1e-2, 1e-1, 1].forEach(function (c) {
-    el('line', { x1: X(c), x2: X(c), y1: T, y2: B, 'class': 'gl' });
-    el('text', { x: X(c), y: B + 16, 'text-anchor': 'middle', 'class': 'tk' }, '$' + (c < 0.01 ? c.toExponential(0).replace('e-', 'e−') : c));
+  for (var e = -5; e <= 0; e++) for (var m = 2; m <= 9; m++) {                      // minor log gridlines make the scale visible
+    var c = m * Math.pow(10, e); if (c > 6e-5 && c < 3) el('line', { x1: X(c), x2: X(c), y1: T, y2: B, 'class': 'gl', opacity: 0.45 });
+  }
+  var lab = { '-4': '$0.0001', '-3': '$0.001', '-2': '$0.01', '-1': '$0.10', '0': '$1' };
+  [-4, -3, -2, -1, 0].forEach(function (e) {
+    var c = Math.pow(10, e);
+    el('line', { x1: X(c), x2: X(c), y1: T, y2: B, 'class': 'gl', 'stroke-width': 1.4 });
+    el('line', { x1: X(c), x2: X(c), y1: B, y2: B + 5, 'class': 'ax' });
+    el('text', { x: X(c), y: B + 17, 'text-anchor': 'middle', 'class': 'tk' }, lab[e]);
   });
   [0.5, 0.6, 0.7, 0.8].forEach(function (v) {
     el('line', { x1: L, x2: R, y1: Y(v), y2: Y(v), 'class': 'gl' });
     el('text', { x: L - 8, y: Y(v) + 4, 'text-anchor': 'end', 'class': 'tk' }, v.toFixed(1));
   });
   el('line', { x1: L, x2: R, y1: B, y2: B, 'class': 'ax' });
-  el('text', { x: (L + R) / 2, y: B + 38, 'text-anchor': 'middle' }, 'cost per trajectory (USD, log scale)');
+  el('text', { x: (L + R) / 2, y: B + 38, 'text-anchor': 'middle' }, 'cost per trajectory (USD, log scale: each step is 10×)');
   el('text', { x: 14, y: (T + B) / 2, transform: 'rotate(-90 14 ' + (T + B) / 2 + ')', 'text-anchor': 'middle' }, 'boundary F1 within ±1 s');
+  function bracket(c1, c2, y, txt, col) {                                          // horizontal span between two costs
+    el('line', { x1: X(c1), x2: X(c2), y1: y, y2: y, stroke: col, 'stroke-width': 1.5 });
+    [c1, c2].forEach(function (c) { el('line', { x1: X(c), x2: X(c), y1: y - 5, y2: y + 5, stroke: col, 'stroke-width': 1.5 }); });
+    el('text', { x: (X(c1) + X(c2)) / 2, y: y - 7, 'text-anchor': 'middle', 'class': 'lab', fill: col }, txt);
+  }
   var kc = 0.16 / 3600 * 3.5;
   var P = [
     { n: 'KiRoSe', c: kc, yam: 0.666, agi: 0.772, col: '#2563eb', lx: 12, ly: 0.719, a: 'start' },
@@ -887,7 +898,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     b.appendChild(document.createElementNS(NS, 'title')).textContent = p.n + ' · AgiBot (20): ' + p.agi.toFixed(3);
     el('text', { x: X(p.c) + p.lx, y: Y(p.ly) + 4, 'text-anchor': p.a, 'class': 'lab', fill: p.col }, p.n);
   });
-  el('text', { x: L + 6, y: B - 8, 'class': 'tk' }, '← cheaper, ↑ more accurate');
+  bracket(kc, 0.00766, T - 14 + 18, '≈50× cheaper than Flora', '#6250d6');
+  bracket(kc, 0.33, B - 12, '≈2,000–6,500× cheaper than API models', 'var(--text-dim)');
 })();
 </script>
 </body>
