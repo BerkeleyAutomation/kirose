@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KiRoSe</title>
+<meta name="description" content="KiRoSe segments robot demonstrations from kinematics: Sparse Motion Tokens compress high-frequency end-effector motion into a compact vocabulary that a language model reads to output subtask boundaries and action descriptions.">
+<meta property="og:title" content="KiRoSe: Using Kinematic Data for Efficient Segmentation of Robot Demonstrations">
+<meta property="og:description" content="Sparse Motion Tokens let a language model segment robot demonstrations from kinematics, transferring zero-shot to new robots and human hands.">
+<meta property="og:image" content="static/images/SMT-Token3.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: single 980px column of full-width bands (template: RoboSegNet project page), fixed dot-nav on wide screens. Light theme only, by design. */
+:root{
+  --bg:#f5f9ff; --bg-elev:#ecf3fd; --bg-card:#ffffff; --border:#dbe7f6; --border-soft:#e7eefb;
+  --text:#15233b; --text-dim:#44566f; --text-faint:#7488a3;
+  --accent:#2563eb; --accent-2:#0e9aa0; --accent-grad:linear-gradient(120deg,#2563eb 0%,#0ea5b5 100%);
+  --hl:rgba(37,99,235,.09); --feature:#e9f1fd;
+  --font:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --max-w:1080px; --radius:14px; --shadow:0 10px 34px rgba(37,99,235,.12);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::after{content:"";position:fixed;inset:0;background:radial-gradient(60% 50% at 50% -10%,rgba(37,99,235,.08),transparent 70%),radial-gradient(40% 40% at 85% 10%,rgba(14,165,181,.06),transparent 70%);pointer-events:none;z-index:0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+img{max-width:100%}
+.container{max-width:var(--max-w);margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));position:relative;z-index:1}
+section{padding-block:56px;position:relative;z-index:1}
+section.tight{padding-block:22px}
+h1,h2,h3{line-height:1.2;letter-spacing:-.02em;text-wrap:balance}
+.section-title{font-size:1.9rem;font-weight:800;margin:0 0 8px;text-align:center}
+.section-intro{text-align:center;color:var(--text-dim);max-width:720px;margin:0 auto 30px}
+.sub-title{font-size:1.25rem;font-weight:700;margin:40px 0 6px}
+.sub-intro{color:var(--text-dim);margin:0 0 18px;max-width:760px}
+
+.sidenav{position:fixed;top:50%;left:24px;transform:translateY(-50%);z-index:20;display:none}
+.sidenav ul{list-style:none;margin:0;padding:0}
+.sidenav li{margin:2px 0}
+.sidenav a{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;color:var(--text-faint);font-size:.82rem;font-weight:500;transition:color .15s ease}
+.sidenav a:hover{color:var(--text);text-decoration:none}
+.sidenav .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--text-faint);flex:0 0 auto;transition:all .18s ease}
+.sidenav .lbl{opacity:.6;transition:opacity .15s ease;white-space:nowrap}
+.sidenav a:hover .lbl,.sidenav a.active .lbl{opacity:1}
+.sidenav a.active{color:var(--text)}
+.sidenav a.active .dot{background:var(--accent-grad);border-color:transparent;box-shadow:0 0 10px rgba(37,99,235,.45);transform:scale(1.25)}
+@media (min-width:1460px){.sidenav{display:block}}
+
+.hero{padding-block:88px 40px;text-align:center;position:relative;z-index:1}
+.hero .badge{display:inline-block;font-family:var(--mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-2);border:1px solid var(--border);border-radius:999px;padding:5px 14px;margin-bottom:22px;background:var(--bg-elev)}
+.hero h1{font-size:clamp(1.7rem,4.2vw,2.9rem);font-weight:800;margin:0 auto 10px;max-width:900px;background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .acro{font-size:1.02rem;color:var(--text-dim);margin:0 auto 14px}
+.hero .acro u{text-decoration-color:var(--accent-2);text-underline-offset:3px;color:var(--text);font-weight:600}
+.authors{font-size:1.08rem;margin:6px auto;max-width:860px}
+.authors span{white-space:nowrap}
+.authors a{color:var(--text);border-bottom:1px solid transparent}
+.authors a:hover{color:var(--accent);text-decoration:none;border-bottom-color:var(--accent)}
+.authors sup,.affiliations sup{color:var(--accent-2);font-size:.7em}
+.affiliations{color:var(--text-dim);font-size:.98rem;margin:8px auto 4px}
+.btn-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:26px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:999px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:.95rem;font-family:var(--font);transition:transform .15s ease,border-color .15s ease}
+.btn:hover{transform:translateY(-2px);border-color:var(--accent);text-decoration:none}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.btn.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+
+.hero .tagline{font-size:1.12rem;color:var(--text);max-width:720px;margin:4px auto 18px;line-height:1.55}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:26px 0 22px}
+.facts div{background:var(--bg-card);padding:16px 18px;min-width:0}
+.facts b{display:block;font-size:1.7rem;font-weight:800;background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
+.facts span{font-size:.86rem;color:var(--text-dim)}
+@media (max-width:760px){.facts{grid-template-columns:repeat(2,1fr)}}
+.teaser-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg-card);box-shadow:var(--shadow)}
+.teaser-wrap img{width:100%;display:block}
+.teaser-wrap.pad{padding:14px}
+.caption{color:var(--text-dim);font-size:.92rem;text-align:center;max-width:800px;margin:16px auto 0}
+.caption strong{color:var(--text)}
+.caption-wide{max-width:100%;text-align:left}
+
+.band{background:var(--bg-elev);border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+.abstract p{max-width:760px;margin:0 auto;text-align:left;color:var(--text-dim);font-size:1.06rem;line-height:1.75}
+.bullet-list{max-width:820px;margin:0 auto;padding:0;list-style:none}
+.bullet-list li{position:relative;padding:6px 0 6px 30px;color:var(--text-dim);font-size:1.04rem}
+.bullet-list li::before{content:"";position:absolute;left:4px;top:15px;width:9px;height:9px;border-radius:2px;background:var(--accent-grad);transform:rotate(45deg)}
+.bullet-list strong{color:var(--text)}
+
+.method-figure{margin:0 0 36px}
+.feature-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 auto}
+.feature-list.suite{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:820px){.feature-list,.feature-list.suite{grid-template-columns:minmax(0,1fr)}}
+.feature-item{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;min-width:0}
+.feature-item h3{margin:0 0 8px;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.feature-item h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--accent-grad);flex:0 0 auto}
+.feature-item p{margin:0;color:var(--text-dim);line-height:1.6}
+.feature-item code,.mono{font-family:var(--mono);font-size:.88em;color:var(--text)}
+.eq{font-family:var(--mono);font-size:.86rem;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:10px 0 0;color:var(--text);overflow-x:auto;white-space:nowrap}
+
+.result-table-block{margin-bottom:30px}
+.result-table-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.rt-name{font-weight:700;font-size:1.05rem}
+.rt-note{color:var(--text-faint);font-size:.85rem}
+.table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card)}
+.result-table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
+@media (max-width:820px){.result-table{min-width:520px}}
+.result-table th,.result-table td{padding:9px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-soft)}
+.result-table th{color:var(--text-faint);font-weight:600;font-size:.78rem;letter-spacing:.02em}
+.result-table th.grp{text-align:center;color:var(--text-dim);border-bottom:1px solid var(--border)}
+.result-table .left{text-align:left;white-space:normal;min-width:7em}
+.result-table tbody tr:last-child td{border-bottom:none}
+.result-table tr.sep td{border-top:1px solid var(--border)}
+.result-table td.best{color:var(--accent-2);font-weight:700}
+.result-table tr.highlight td{background:var(--hl);font-weight:600}
+.result-table tr.highlight td.left{color:var(--accent)}
+
+.two-col{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:32px;align-items:center}
+@media (max-width:820px){.two-col{grid-template-columns:minmax(0,1fr)}}
+.two-col > *{min-width:0}
+.two-col .caption{text-align:left;margin-top:10px}
+
+.tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px}
+.tab{font-family:var(--font);font-size:.9rem;font-weight:600;padding:8px 16px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);cursor:pointer;transition:border-color .15s ease,color .15s ease}
+.tab:hover{border-color:var(--accent);color:var(--text)}
+.tab[aria-selected="true"]{background:var(--accent-grad);color:#fff;border-color:transparent}
+.gallery-frame{max-height:780px;overflow-y:auto}
+
+.findings{list-style:none;padding:0;margin:0 auto;counter-reset:f;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.findings li:last-child:nth-child(odd){grid-column:1/-1}
+@media (max-width:820px){.findings{grid-template-columns:minmax(0,1fr)}}
+.findings li{position:relative;padding:16px 16px 16px 52px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);margin:0;color:var(--text-dim)}
+.findings li::before{counter-increment:f;content:counter(f);position:absolute;left:16px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--accent-grad);color:#fff;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.findings strong{color:var(--text)}
+
+.bibtex-box{position:relative;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.bibtex-box pre{margin:0;padding:22px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;color:var(--text-dim);line-height:1.7}
+.copy-btn{position:absolute;top:12px;right:12px;padding:7px 14px;font-size:.8rem;font-weight:600;font-family:var(--font);border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);cursor:pointer}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.copy-btn.copied{border-color:var(--accent-2);color:var(--accent-2)}
+/* video results: player + live lanes + timeline */
+.vgroups{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px}
+.eps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:18px}
+.ep{min-width:0;font-family:var(--font);text-align:left;background:var(--bg-card);color:var(--text-dim);border:1px solid var(--border);border-radius:10px;padding:7px 12px;cursor:pointer;display:flex;flex-direction:column;gap:1px;transition:border-color .15s ease}
+.ep:hover{border-color:var(--accent)}
+.ep b{font-weight:600;font-size:.86rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep small{font-family:var(--mono);font-size:.72rem;color:var(--text-faint);font-variant-numeric:tabular-nums}
+.ep[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.vmain{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:820px){.vmain{grid-template-columns:minmax(0,1fr)}}
+.vmain > *{min-width:0}
+.vstage{position:relative;background:#0b1220;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow)}
+.vstage video{display:block;width:100%;height:auto;max-height:420px;margin:0 auto;background:#0b1220}
+.vctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.vctl button{font-family:var(--font);font-size:.88rem;font-weight:600;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:999px;padding:6px 14px;cursor:pointer}
+.vctl button:hover{border-color:var(--accent)}
+.vclock{font-family:var(--mono);font-size:.82rem;color:var(--text-dim);font-variant-numeric:tabular-nums;margin-left:auto}
+.vnow{display:flex;flex-direction:column;gap:10px}
+.vinstr{font-size:.92rem;color:var(--text-dim)}
+.vinstr b{color:var(--text)}
+.lane-now{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:baseline}
+.who{font-weight:700;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.who.gt{color:var(--text)}.who.kr{color:var(--accent)}.who.vl{color:var(--text-faint)}
+.desc{font-size:.98rem;color:var(--text);min-height:1.5em;overflow-wrap:anywhere}
+.desc.none{color:var(--text-faint);font-style:italic}
+.f1{font-family:var(--mono);font-size:.74rem;color:var(--text-faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.span{grid-column:2/4;font-family:var(--mono);font-size:.74rem;color:var(--text-faint)}
+.tl-wrap{margin-top:18px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 8px}
+.tl-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:.84rem;color:var(--text-dim);margin-bottom:6px}
+.timeline{display:block;width:100%;height:auto;cursor:pointer;touch-action:none}
+.timeline:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vnote{color:var(--text-faint);font-size:.84rem;margin:12px 0 0}
+footer{border-top:1px solid var(--border-soft);padding-block:40px;text-align:center;color:var(--text-faint);font-size:.88rem;position:relative;z-index:1}
+@media (max-width:640px){.hero{padding-block:60px 30px}section{padding-block:40px}.abstract p{text-align:left}.btn{padding:9px 16px;font-size:.9rem}.caption-wide{text-align:left}}
+
+/* hero (RoboVista-style): faded looping video mosaic, logo wordmark, institution logos */
+.hero{isolation:isolate;padding-block:80px 52px}
+.hero-video{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;-webkit-mask-image:radial-gradient(120% 120% at 50% 38%,#000 32%,transparent 78%);mask-image:radial-gradient(120% 120% at 50% 38%,#000 32%,transparent 78%)}
+.hero-video video{width:100%;height:100%;object-fit:cover;opacity:.55;filter:saturate(.85)}
+.hero-video::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 55% at 50% 42%,rgba(245,249,255,.82),rgba(245,249,255,.5) 70%),linear-gradient(180deg,rgba(245,249,255,.35),rgba(245,249,255,.85))}
+@media (prefers-reduced-motion:reduce){.hero-video video{display:none}}
+.hero h1.hero-logo{display:flex;align-items:center;justify-content:center;font-size:clamp(3rem,8vw,5.4rem);letter-spacing:-.03em;margin:0 auto 6px;background:none;color:inherit}
+.kr-logo{display:inline-flex;align-items:center;gap:clamp(12px,2vw,20px)}
+.kr-logo-mark{width:clamp(56px,8vw,88px);height:auto;flex:0 0 auto}
+.kr-logo-word{line-height:1;background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-subtitle{font-size:clamp(1.15rem,2.5vw,1.6rem);font-weight:700;line-height:1.25;letter-spacing:-.01em;color:var(--text);max-width:820px;margin:0 auto 18px;text-wrap:balance}
+.hero-logos{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:34px;margin-top:22px}
+.hero-logos img{height:44px;width:auto;max-width:220px;object-fit:contain}
+/* title figure: live segmentation + accuracy/cost */
+.teaser-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:22px;align-items:stretch}
+@media (max-width:860px){.teaser-grid{grid-template-columns:minmax(0,1fr)}}
+.live-card,.cost-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;min-width:0;display:flex;flex-direction:column}
+.live-stage{position:relative;border-radius:10px;overflow:hidden;background:#0b1220;aspect-ratio:16/10}
+.live-stage video{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .35s ease}
+.live-stage video.fade{opacity:0}
+.live-chip{position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:rgba(11,18,32,.62);padding:4px 9px;border-radius:999px;backdrop-filter:blur(4px)}
+.live-cap{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 11px;background:linear-gradient(180deg,transparent,rgba(11,18,32,.82));color:#fff;font-size:1rem;font-weight:600;display:flex;gap:10px;align-items:baseline}
+.live-who{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#7cc4ff;flex:0 0 auto}
+.live-lanes{position:relative;margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.lane-row{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:8px;font-size:.74rem;color:var(--text-dim);font-weight:600}
+.lane-row .kr{color:var(--accent)}
+.lane{position:relative;height:14px;border-radius:4px;background:var(--bg-elev);overflow:hidden}
+.lane i{position:absolute;top:0;bottom:0;border-right:2px solid var(--bg-card)}
+#laneGt i{background:#475569}#laneGt i:nth-child(even){background:#94a3b8}
+#laneKr i{background:#2563eb}#laneKr i:nth-child(even){background:#93c5fd}
+.lane i.on{box-shadow:inset 0 0 0 2px #0ea5b5}
+.live-head{position:absolute;top:-3px;bottom:-3px;width:2px;background:#0ea5b5;left:86px;pointer-events:none}
+.live-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px;font-size:.8rem;color:var(--text-faint)}
+.live-dots{display:flex;gap:5px}
+.live-dots b{width:7px;height:7px;border-radius:50%;background:var(--border);display:block}
+.live-dots b.on{background:var(--accent)}
+.cost-title{font-weight:700;font-size:.95rem;margin:4px 6px 4px}
+#costPlot{width:100%;height:auto;display:block;flex:1}
+#costPlot text{font-family:var(--font);font-size:11px;fill:var(--text-dim)}
+#costPlot .tk{font-family:var(--mono);font-size:10px;fill:var(--text-faint)}
+#costPlot .gl{stroke:var(--border-soft)}
+#costPlot .ax{stroke:var(--text-faint)}
+#costPlot .lab{font-weight:700;font-size:12px}
+.cost-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.76rem;color:var(--text-dim);margin:2px 6px 4px}
+.cost-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.dot-f{background:var(--text-dim)}.dot-o{border:2px solid var(--text-dim);box-sizing:border-box}
+/* TL;DR */
+.tldr-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 32px 22px;box-shadow:var(--shadow)}
+.tldr-title{text-align:center;font-size:1.7rem;font-weight:800;margin:0 0 10px;background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tldr-text{margin:0;color:var(--text-dim);font-size:1.06rem;line-height:1.75}
+.tldr-text .hl{color:var(--accent);font-weight:600}
+.abs-more{margin-top:14px;border-top:1px solid var(--border-soft);padding-top:10px}
+.abs-more summary{cursor:pointer;color:var(--text-faint);font-size:.9rem;font-weight:600}
+.abs-more p{color:var(--text-dim);margin:10px 0 0;line-height:1.7}
+.smt-anim{width:100%;height:auto;display:block}
+</style>
+</head>
+<body>
+
+<nav class="sidenav" aria-label="Section navigation">
+  <ul>
+    <li><a href="#top"><span class="dot"></span><span class="lbl">Overview</span></a></li>
+    <li><a href="#abstract"><span class="dot"></span><span class="lbl">TL;DR</span></a></li>
+    <li><a href="#smt"><span class="dot"></span><span class="lbl">Motion Tokens</span></a></li>
+    <li><a href="#capabilities"><span class="dot"></span><span class="lbl">Capabilities</span></a></li>
+    <li><a href="#videos"><span class="dot"></span><span class="lbl">Videos</span></a></li>
+    <li><a href="#method"><span class="dot"></span><span class="lbl">Method</span></a></li>
+    <li><a href="#data"><span class="dot"></span><span class="lbl">Data</span></a></li>
+    <li><a href="#results"><span class="dot"></span><span class="lbl">Segmentation</span></a></li>
+    <li><a href="#transfer"><span class="dot"></span><span class="lbl">Cross-Embodiment</span></a></li>
+    <li><a href="#examples"><span class="dot"></span><span class="lbl">Examples</span></a></li>
+    <li><a href="#progress"><span class="dot"></span><span class="lbl">Progress</span></a></li>
+    <li><a href="#findings"><span class="dot"></span><span class="lbl">Key Findings</span></a></li>
+    <li><a href="#bibtex"><span class="dot"></span><span class="lbl">BibTeX</span></a></li>
+  </ul>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-video" aria-hidden="true"><video autoplay muted loop playsinline preload="auto" poster=""><source src="static/videos/hero_mosaic.mp4" type="video/mp4"></video></div>
+  <div class="container">
+    <span class="badge">Preprint · 2026</span>
+    <h1 class="hero-logo"><span class="kr-logo" aria-label="KiRoSe"><svg class="kr-logo-mark" viewBox="0 0 96 72" aria-hidden="true" focusable="false"><defs><linearGradient id="krg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#0ea5b5"/></linearGradient></defs><path d="M8 34 C18 10, 28 10, 36 30 S 54 52, 62 26 S 80 8, 88 22" fill="none" stroke="url(#krg)" stroke-width="4" stroke-linecap="round"/><g fill="url(#krg)"><rect x="8" y="50" width="16" height="14" rx="3.5"/><rect x="29" y="50" width="16" height="14" rx="3.5" opacity=".55"/><rect x="50" y="50" width="16" height="14" rx="3.5"/><rect x="71" y="50" width="16" height="14" rx="3.5" opacity=".3"/></g></svg><span class="kr-logo-word">KiRoSe</span></span></h1>
+    <p class="hero-subtitle">Using Kinematic Data for Efficient Segmentation of Robot Demonstrations</p>
+    <div class="authors">
+      <span><a href="https://ehehee.github.io/" target="_blank" rel="noreferrer">Shuangyu Xie</a><sup>1</sup>, </span>
+      <span><a href="https://keplerc.github.io/" target="_blank" rel="noreferrer">Kaiyuan Chen</a><sup>1</sup>, </span>
+      <span>Muhammad Zubair Irshad<sup>2</sup>, </span>
+      <span>Richard Cheng<sup>2</sup>, </span>
+      <span>Sergey Zakharov<sup>2</sup>, </span>
+      <span><a href="https://goldberg.berkeley.edu/" target="_blank" rel="noreferrer">Ken Goldberg</a><sup>1</sup></span>
+    </div>
+    <div class="affiliations"><span><sup>1</sup>University of California, Berkeley</span> &nbsp; <span><sup>2</sup>Toyota Research Institute</span></div>
+    <div class="hero-logos"><img src="static/images/logos/berkeley.png" alt="University of California, Berkeley"><img src="static/images/logos/tri.png" alt="Toyota Research Institute"></div>
+    <div class="btn-row">
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
+      <a class="btn disabled" href="#" aria-disabled="true" title="Released with the arXiv version"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
+      <a class="btn" href="#examples"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Examples</span></a>
+    </div>
+  </div>
+</header>
+
+<section class="tight" id="teaser">
+  <div class="container">
+    <div class="teaser-grid">
+      <div class="live-card">
+        <div class="live-stage">
+          <video id="liveVid" muted playsinline preload="auto"></video>
+          <span class="live-chip" id="liveChip">AgiBot G1</span>
+          <div class="live-cap"><span class="live-who">KiRoSe</span><span id="liveDesc">&nbsp;</span></div>
+        </div>
+        <div class="live-lanes" aria-hidden="true">
+          <div class="lane-row"><span>Annotation</span><div class="lane" id="laneGt"></div></div>
+          <div class="lane-row"><span class="kr">KiRoSe</span><div class="lane" id="laneKr"></div></div>
+          <div class="live-head" id="liveHead"></div>
+        </div>
+        <div class="live-meta"><span id="liveTask">&nbsp;</span><span id="liveDots" class="live-dots"></span></div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-title">Accuracy vs. cost per demonstration</div>
+        <svg id="costPlot" viewBox="0 0 420 330" role="img" aria-label="Boundary F1 within one second versus cost per trajectory on a log scale. KiRoSe reaches 0.67 on YAM and 0.77 on AgiBot at about 0.0002 dollars per trajectory; GPT-6 Astra reaches 0.60 and 0.54 at 1.01 dollars; Claude Opus 5.5 reaches 0.50 and 0.67 at 0.33 dollars."></svg>
+        <div class="cost-legend"><span><i class="dot-f"></i>YAM, 50 held-out episodes</span><span><i class="dot-o"></i>AgiBot G1, 20 episodes (zero-shot)</span></div>
+      </div>
+    </div>
+    <p class="caption caption-wide"><strong>KiRoSe segments robot demonstrations from kinematics alone.</strong> Left: KiRoSe cycling through held-out YAM, zero-shot AgiBot G1 and human-hand episodes. The video is for reference; the model reads only end-effector motion. Right: boundary F1 within ±1&nbsp;s against cost per trajectory. KiRoSe runs on one H200 (0.16&nbsp;s per trajectory at $3.50 per GPU-hour); the frontier video models are priced at their API rates and read 2&nbsp;Hz frames. KiRoSe processes about 2.5k tokens per trajectory, against 73k–79k for the video models.</p>
+  </div>
+</section>
+
+
+<section class="tight" id="abstract">
+  <div class="container">
+    <div class="tldr-box">
+      <h2 class="tldr-title">TL;DR</h2>
+      <p class="tldr-text"><span class="hl">KiRoSe</span> reads a robot's own <span class="hl">end-effector kinematics</span>, compressed into <span class="hl">2 Sparse Motion Tokens per second</span>, and writes subtask boundaries and action descriptions with an open 9B language model. Trained on one robot (YAM), it transfers <span class="hl">zero-shot to AgiBot G1 and human hands</span>, beats frontier video models at locating boundaries on robot data, and costs <span class="hl">thousands of times less</span> per demonstration. The same tokenizer also tracks task progress and notices when an action is undone.</p>
+      <details class="abs-more"><summary>Read the abstract</summary><p>Segmenting robot demonstration data into disjoint temporal and semantic subsegments is valuable for learning, cleaning, retrieval, and analysis. Segmentation is often performed manually in a tedious and error-prone process. Multimodal Large Language Models (MLLMs) have the potential to automate this process, but directly ingesting raw multi-camera video streams into MLLMs can be costly and can quickly exhaust context windows. We introduce <strong>KiRoSe</strong> (<strong>Ki</strong>nematics for <strong>Ro</strong>bot <strong>Se</strong>gmentation), a framework that focuses on the companion stream of robot kinematic data. Inspired by classical entropy coding such as Huffman coding, where frequent symbols get compact codes, we propose <strong>Sparse Motion Tokens (SMTs)</strong>, a discrete kinematic vocabulary that compactly represents recurring, temporally localized motion patterns, which we call <em>kinematic events</em>. SMTs are learned by encoding kinematic trajectories with temporal-segment supervision and quantizing the resulting features. We use increasingly available robot demonstration subtask annotations to supervise an open language model to interpret the resulting token sequences. Evaluation against human-labeled segmentation shows that KiRoSe substantially outperforms baseline segmentation methods in F1 quality and transfers zero-shot to unseen robot embodiments and egocentric human motion, while preserving the language model's open-vocabulary knowledge. Beyond segmentation, the same frozen representation supports progress estimation: a small head trained only on YAM tracks task progress zero-shot on an unseen robot and detects when an action is being undone.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="smt">
+  <!-- SMT concept figure -->
+  <div class="container">
+    <h2 class="section-title">Sparse Motion Tokens</h2>
+    <p class="section-intro">The same motion makes the same tokens. Recurring kinematic events, such as a bimanual lift, a handover, a pick or a place, map to recurring codes across tasks and objects.</p>
+    <div class="teaser-wrap"><video class="smt-anim" autoplay muted loop playsinline preload="auto" poster="static/media/smt_motion_poster.png" aria-label="Four motion categories, each shown in two YAM clips from different tasks; tokens light up in sync with the robot, and codes shared by both clips are coloured"><source src="static/media/smt_motion.webm" type="video/webm"><source src="static/media/smt_motion.mp4" type="video/mp4"><img src="static/media/smt_motion.gif" alt="Animated Sparse Motion Tokens figure"></video></div>
+    <p class="caption caption-wide"><strong>Figure 1. Recurring motion, recurring tokens.</strong> Each panel shows one kinematic event in two YAM episodes from different tasks; Sparse Motion Tokens appear in sync with the robot (2 per second, from a 512-code vocabulary), and codes emitted in both clips are coloured. A single-arm pick-up emits 438 → 456 → 445 → 431 → 296 in both clips. Pairs are chosen examples; across all held-out segments, clips of the same motion category share about twice as many codes as clips of different categories. A GIF version is at <a href="static/media/smt_motion.gif">static/media/smt_motion.gif</a>.</p>
+  </div>
+</section>
+
+<section id="capabilities">
+  <div class="container">
+    <h2 class="section-title">One tokenizer, several outputs</h2>
+    <p class="section-intro">A single frozen motion tokenizer feeds every output. Here it runs on an AgiBot G1 episode, a robot KiRoSe never saw in training.</p>
+    <div class="teaser-wrap pad"><img src="static/images/capabilities.png" alt="AgiBot toast-bread episode: reference video frames, arm-speed traces, a strip of 77 colored motion tokens, annotated versus KiRoSe subtask timelines with descriptions, and a progress curve that rises for the recorded subtask and falls when it is played in reverse" loading="lazy"></div>
+    <p class="caption caption-wide"><strong>Figure 2. What KiRoSe produces from kinematics alone.</strong> &#9312; End-effector kinematics (arm speeds shown; the video frames are for reference and are not an input). &#9313; Sparse Motion Tokens, 2 per second. &#9314; Subtask boundaries and action descriptions from the Qwen3.5-9B reader. KiRoSe names actions but not always objects (&ldquo;toast rack&rdquo; for the toaster), since object identity is visual. &#9315; A 68k-parameter progress head on the same tokenizer: progress rises as the boxed subtask is executed and falls when the same subtask is played in reverse. Across 2,586 AgiBot subtasks, progress falls on 86% of reversed ones.</p>
+    <div class="facts">
+      <div><b>0</b><span>cameras needed</span></div>
+      <div><b>2</b><span>tokens per second of motion</span></div>
+      <div><b>~$0.01</b><span>per hour of robot data, one H200</span></div>
+      <div><b>3</b><span>embodiments, 2 of them zero-shot</span></div>
+    </div>
+    <div class="feature-list suite">
+      <div class="feature-item"><h3>KiRoSe-SMT</h3><p>The motion tokenizer: a 2.76M-parameter transition-supervised encoder and a 512-code vocabulary. It maps any end-effector trajectory to discrete tokens and features.</p></div>
+      <div class="feature-item"><h3>KiRoSe-Reader</h3><p>Qwen3.5-9B with LoRA. It reads motion tokens and the task instruction and writes timed subtasks with action descriptions.</p></div>
+      <div class="feature-item"><h3>KiRoSe-Progress</h3><p>A 68k-parameter head on the tokenizer's features that outputs dense, signed task progress and detects when an action is being undone.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="videos">
+  <div class="container">
+    <h2 class="section-title">Segmentation Videos</h2>
+    <p class="section-intro">Pick an episode and press play. The lanes follow the video: the human annotation, KiRoSe reading kinematics only, and Qwen3.5-9B reading the video and instruction zero-shot. Click the timeline to jump.</p>
+    <div class="vgroups" role="group" aria-label="Embodiment" id="vgroups"></div>
+    <div class="eps" role="group" aria-label="Episodes" id="eps"></div>
+    <div class="vmain">
+      <div>
+        <div class="vstage"><video id="vid" muted playsinline preload="metadata"></video></div>
+        <div class="vctl">
+          <button id="vplay" type="button">Play</button>
+          <button id="vrate" type="button" aria-label="Playback speed">Speed 2×</button>
+          <span class="vclock" id="vclock">0.0 / 0.0 s</span>
+        </div>
+      </div>
+      <div class="vnow">
+        <div class="vinstr" id="vinstr"></div>
+        <div class="lane-now"><span class="who gt">Annotation</span><span class="desc" id="nGt"></span><span class="f1" id="cGt"></span><span class="span" id="sGt"></span></div>
+        <div class="lane-now"><span class="who kr">KiRoSe</span><span class="desc" id="nKr"></span><span class="f1" id="cKr"></span><span class="span" id="sKr"></span></div>
+        <div class="lane-now"><span class="who vl">Video VLM</span><span class="desc" id="nVl"></span><span class="f1" id="cVl"></span><span class="span" id="sVl"></span></div>
+      </div>
+    </div>
+    <div class="tl-wrap">
+      <div class="tl-head"><span id="tlTitle"></span><span>F1 = boundary F1 at ±1 s against the annotation</span></div>
+      <svg class="timeline" id="tl" tabindex="0" role="slider" aria-label="Timeline; arrow keys move 1 second" aria-valuemin="0"></svg>
+    </div>
+    <p class="vnote">Robot episodes are the paper's appendix examples followed by more chosen with the same rule: per task, the episode whose KiRoSe score is closest to that task's median. Videos play at the recorded 5 fps.</p>
+  </div>
+</section>
+
+
+<section id="method">
+  <div class="container">
+    <h2 class="section-title">Method</h2>
+    <p class="section-intro">KiRoSe has two stages. A kinematic encoder is trained with subtask-transition supervision, and its features are pooled and quantized into Sparse Motion Tokens. The tokenizer is then frozen while a pretrained language model learns to read the tokens and write segments.</p>
+    <figure class="method-figure">
+      <div class="teaser-wrap"><img src="static/images/overview_with_token_ids.png" alt="KiRoSe pipeline: kinematic stream to transition-supervised encoder, temporal pooling and codebook quantization into motion tokens, then a language model that outputs timed action descriptions" loading="lazy"></div>
+      <figcaption class="caption"><strong>Figure 3. KiRoSe pipeline.</strong> Given a kinematic stream and the instruction “fold the paper box,” KiRoSe encodes motion with a transition-supervised encoder, then pools and quantizes its features into Sparse Motion Tokens. The language model reads the tokens, time markers and instruction, and outputs action descriptions with start and end times such as “pick up the object,” “place in the box” and “adjust.”</figcaption>
+    </figure>
+    <div class="feature-list">
+      <div class="feature-item">
+        <h3>Shared end-effector input</h3>
+        <p>Every embodiment is mapped to the same 14 channels at 30 Hz: per arm or hand, linear velocity, angular velocity and gripper opening rate. For robots these come from end-effector motion and gripper aperture; for human hands, from wrist motion, palm orientation and thumb–index separation.</p>
+        <div class="eq">x<sub>t</sub> = ⊕<sub>h∈{L,R}</sub> [ v<sub>h,t</sub> , ω<sub>h,t</sub> , ġ<sub>h,t</sub> ] ∈ ℝ<sup>14</sup></div>
+      </div>
+      <div class="feature-item">
+        <h3>Transition-supervised temporal encoder</h3>
+        <p>Residual temporal convolutions map the stream to contextual features. During training, an auxiliary head predicts a transition probability at every step against soft targets centred on annotated subtask boundaries, with a focal binary cross-entropy loss. The head is discarded afterwards; the 2.76M-parameter encoder is kept.</p>
+      </div>
+      <div class="feature-item">
+        <h3>Sparse Motion Tokens</h3>
+        <p>Encoder features are pooled on a uniform grid and assigned to the nearest of K = 512 k-means centroids fitted on training trajectories only. Token positions do not depend on annotated or predicted boundaries; supervision shapes what the features encode, not where tokens fall.</p>
+      </div>
+      <div class="feature-item">
+        <h3>Language-model reader</h3>
+        <p>Qwen3.5-9B receives 512 new vocabulary entries, <code>&lt;k0&gt;</code> to <code>&lt;k511&gt;</code>, plus textual time markers every second and the task instruction. LoRA adaptation trains it to emit the reference segmentation as JSON with start time, end time and a description per segment. The tokenizer stays frozen, so the model learns to read the motion vocabulary rather than reshape it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="data">
+  <div class="container">
+    <h2 class="section-title">Training and Evaluation Data</h2>
+    <p class="section-intro">All trainable components see only the YAM bimanual robot in ABC-130K. AgiBot G1 and Ego-Exo4D human hands are evaluated without any target-embodiment training, with fewer boundaries per minute and less verb overlap than YAM.</p>
+    <div class="result-table-block">
+      <div class="table-scroll">
+        <table class="result-table">
+          <thead><tr><th class="left">Dataset</th><th class="left">Embodiment</th><th class="left">Purpose</th><th>Episodes</th><th>Tasks</th><th>Duration (s)</th><th>Segments / ep.</th><th>Boundaries / min</th><th>Verbs (% in train)</th></tr></thead>
+          <tbody>
+            <tr><td class="left">ABC-130K</td><td class="left">YAM</td><td class="left">Training</td><td>5,478</td><td>140</td><td>173.3 ± 66.5</td><td>26.6 ± 15.0</td><td>9.2</td><td>83 (100%)</td></tr>
+            <tr class="sep"><td class="left">ABC-130K</td><td class="left">YAM</td><td class="left">Held-out test</td><td>200</td><td>10</td><td>154.6 ± 57.6</td><td>24.3 ± 13.4</td><td>9.4</td><td>24 (99%)</td></tr>
+            <tr><td class="left">AgiBot World</td><td class="left">AgiBot G1</td><td class="left">Cross-embodiment, test</td><td>1,199</td><td>16</td><td>58.0 ± 23.3</td><td>7.4 ± 3.3</td><td>7.6</td><td>17 (73%)</td></tr>
+            <tr><td class="left">AgiBot World</td><td class="left">AgiBot G1</td><td class="left">Cross-embodiment, held-out tasks</td><td>2,653</td><td>3</td><td>94.4 ± 31.1</td><td>10.8 ± 3.1</td><td>6.9</td><td>12 (61%)</td></tr>
+            <tr><td class="left">Ego-Exo4D</td><td class="left">Human hands</td><td class="left">Transfer to human</td><td>193</td><td>12</td><td>81.4 ± 53.5</td><td>10.1 ± 5.9</td><td>7.4</td><td>69 (35%)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <figure class="method-figure">
+      <div class="teaser-wrap pad"><img src="static/images/embodiment_distribution_compact.png" alt="Example tasks and annotated timelines for YAM, AgiBot and human hands, with 40-second traces of linear speed, angular speed and opening rate per arm" loading="lazy"></div>
+      <figcaption class="caption"><strong>Figure 4. Evaluation data.</strong> Top: example tasks and annotated action timelines, colored by action category. Bottom: representative 40-second traces of linear speed, angular speed and opening rate for the left (black) and right (orange) arms or hands. The datasets differ in task semantics, temporal structure and motion.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="results">
+  <div class="container">
+    <h2 class="section-title">Trajectory Segmentation</h2>
+    <p class="section-intro">Every kinematic tokenizer is paired with the same LoRA-adapted Qwen3.5-9B reader. Boundary F1 matches predicted and reference boundaries within a tolerance; Grounded F1 also requires the action description to agree.</p>
+    <div class="two-col">
+      <div class="result-table-block">
+        <div class="result-table-head"><span class="rt-name">200 YAM episodes, 10 held-out tasks</span></div>
+        <div class="table-scroll">
+          <table class="result-table">
+            <thead>
+              <tr><th class="left" rowspan="2">Method</th><th class="grp" colspan="3">Boundary F1</th><th class="grp" colspan="2">Grounded F1</th></tr>
+              <tr><th>±0.5 s</th><th>±1 s</th><th>±2 s</th><th>Lex.</th><th>Emb.</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="left">Qwen3.5-9B zero-shot (video)</td><td>0.09</td><td>0.16</td><td>0.22</td><td>0.05</td><td>0.07</td></tr>
+              <tr class="sep"><td class="left">FAST</td><td>0.22</td><td>0.42</td><td>0.50</td><td>0.12</td><td>0.17</td></tr>
+              <tr><td class="left">OAT</td><td>0.22</td><td>0.41</td><td>0.51</td><td>0.14</td><td>0.20</td></tr>
+              <tr><td class="left">MotionGPT</td><td>0.23</td><td>0.41</td><td>0.50</td><td>0.13</td><td>0.16</td></tr>
+              <tr class="sep"><td class="left">KiRoSe: Latent + MLP</td><td>0.44</td><td>0.52</td><td>0.56</td><td>–</td><td>–</td></tr>
+              <tr><td class="left">KiRoSe: SMT codes + MLP</td><td>0.38</td><td>0.45</td><td>0.49</td><td>–</td><td>–</td></tr>
+              <tr class="highlight"><td class="left">KiRoSe</td><td class="best">0.48</td><td class="best">0.63</td><td class="best">0.71</td><td class="best">0.43</td><td class="best">0.49</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="caption caption-wide">FAST, OAT and MotionGPT use their native 32-D joint-state input and a slightly larger training set, so the comparison is between complete tokenizer interfaces.</p>
+      </div>
+      <figure style="margin:0">
+        <div class="teaser-wrap pad"><img src="static/images/token_efficiency_compact.png" alt="Boundary F1 at plus or minus 1 second as a function of motion-token rate for each tokenizer" loading="lazy"></div>
+        <figcaption class="caption">Boundary F1 ±1 s as a function of motion-token rate.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="transfer">
+  <div class="container">
+    <h2 class="section-title">Cross-Embodiment Transfer</h2>
+    <p class="section-intro">The encoder, codebook and reader are trained on YAM only. On AgiBot G1 and human hands they run zero-shot through the shared end-effector representation.</p>
+    <div class="two-col">
+      <figure style="margin:0">
+        <div class="teaser-wrap pad"><img src="static/images/xembod_main_iclr.png" alt="Bar chart of Boundary F1 at plus or minus 0.5 seconds for YAM, AgiBot and human hands, comparing Qwen zero-shot video, Latent plus MLP, KiRoSe, and GPT-6 Astra on a matched subset" loading="lazy"></div>
+        <figcaption class="caption"><strong>Figure 5.</strong> Boundary F1 ±0.5 s per embodiment. Hatched: GPT-6 Astra and KiRoSe on the same 50 / 20 / 30-episode subsets.</figcaption>
+      </figure>
+      <ul class="bullet-list">
+        <li><strong>Timing transfers.</strong> KiRoSe reaches 0.40 Boundary F1 ±0.5 s on all 3,852 AgiBot episodes without AgiBot data, against 0.48 on held-out YAM. The video Qwen3.5-9B baseline reaches 0.19 on the 357 AgiBot episodes with video.</li>
+        <li><strong>Ahead of a frontier video model.</strong> On 20 matched AgiBot episodes, GPT-6 Astra reaches 0.30 and KiRoSe 0.61.</li>
+        <li><strong>The motion signal is used.</strong> Removing the motion tokens, or swapping in tokens from another trajectory, drops Boundary F1 ±1 s from 0.61–0.63 to 0.31–0.35 on both robots.</li>
+        <li><strong>Actions transfer, object names need vision.</strong> On the matched AgiBot episodes, action-level Grounded F1 is 0.593 for KiRoSe and 0.349 for Astra; on full descriptions with object names Astra leads (0.35 vs 0.23 embedding).</li>
+      </ul>
+    </div>
+
+    <h3 class="sub-title">Unseen-task vocabulary on human hands</h3>
+    <p class="sub-intro">On Ego-Exo4D the reader sees only the task name and motion tokens. A <em>supplied</em> word appears in that task's human annotations but never in YAM training data or the prompt. Such words occur in 6 of 12 tasks, which indicates that YAM adaptation keeps the language model's open vocabulary.</p>
+    <div class="table-scroll">
+      <table class="result-table">
+        <thead><tr><th class="left">Task</th><th>Trajectories</th><th>Hits</th><th class="left">Supplied words</th></tr></thead>
+        <tbody>
+          <tr><td class="left">Omelet</td><td>36</td><td>17</td><td class="left">pan, egg, mixture, whisk</td></tr>
+          <tr><td class="left">COVID-19 test</td><td>65</td><td>14</td><td class="left">swab</td></tr>
+          <tr><td class="left">Tomato &amp; eggs</td><td>12</td><td>11</td><td class="left">pan</td></tr>
+          <tr><td class="left">Flat tire</td><td>13</td><td>8</td><td class="left">inner (tube), lever</td></tr>
+          <tr><td class="left">Noodles</td><td>9</td><td>3</td><td class="left">pot, stir</td></tr>
+          <tr><td class="left">Salad</td><td>26</td><td>2</td><td class="left">toss, dressing</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="examples">
+  <div class="container">
+    <h2 class="section-title">Segmentation Examples</h2>
+    <p class="section-intro">Keyframes, ground truth, KiRoSe and the zero-shot video baseline on the same timeline, colored by leading verb.</p>
+    <div class="tabs" role="tablist" aria-label="Embodiment">
+      <button class="tab" role="tab" id="tab-agibot" aria-selected="true" aria-controls="gallery" data-img="static/images/app_seg_agibot.png" data-cap="AgiBot World, zero-shot embodiment transfer. Neither the tokenizer nor the reader sees AgiBot data, yet KiRoSe places boundaries at the grasp and release events of each pick–place cycle and reaches Boundary F1 ±1 s of 0.73–0.78 on all five episodes, above the video baseline on each (0.00–0.57). Descriptions transfer at the level of actions while object names follow YAM phrasing.">AgiBot G1 (zero-shot)</button>
+      <button class="tab" role="tab" id="tab-yam" aria-selected="false" aria-controls="gallery" data-img="static/images/app_seg_yam.png" data-cap="YAM, held-out tasks from ABC-130K. The zero-shot video model tends to emit a few coarse segments that restate the instruction, whereas KiRoSe recovers the repeated grasp–place, flatten–fold and insert cycles of the reference from kinematics alone. Its Boundary F1 ±1 s exceeds the video baseline on all five episodes (0.44–0.72 versus 0.07–0.38).">YAM (held-out tasks)</button>
+      <button class="tab" role="tab" id="tab-human" aria-selected="false" aria-controls="gallery" data-img="static/images/app_seg_human.png" data-cap="Ego-Exo4D human hands, zero-shot. Overlays show the hand joints used to build the shared input: the wrist for linear velocity, the wrist-to-knuckle fan for the palm frame and angular velocity, and the thumb–index line for aperture.">Human hands (zero-shot)</button>
+    </div>
+    <figure style="margin:0" id="gallery" role="tabpanel" aria-labelledby="tab-agibot">
+      <div class="teaser-wrap pad gallery-frame"><img id="gallery-img" src="static/images/app_seg_agibot.png" alt="Segmentation timelines with keyframes for five episodes" loading="lazy"></div>
+      <figcaption class="caption caption-wide" id="gallery-cap">AgiBot World, zero-shot embodiment transfer. Neither the tokenizer nor the reader sees AgiBot data, yet KiRoSe places boundaries at the grasp and release events of each pick–place cycle and reaches Boundary F1 ±1 s of 0.73–0.78 on all five episodes, above the video baseline on each (0.00–0.57). Descriptions transfer at the level of actions while object names follow YAM phrasing.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band" id="progress">
+  <div class="container">
+    <h2 class="section-title">Progress Estimation</h2>
+    <p class="section-intro">A useful progress signal should rise while an action is executed and fall when it is undone. We play one AgiBot subtask backwards in place (video reversed, kinematic velocities negated) and check whether predicted progress follows.</p>
+    <figure class="method-figure">
+      <div class="teaser-wrap pad"><img src="static/images/fig5_warp_pair.png" alt="Two AgiBot episodes with one subtask played backwards; ReWiND progress keeps rising during the reversed segment while KiRoSe progress falls" loading="lazy"></div>
+      <figcaption class="caption"><strong>Figure 6. Reversal probe on AgiBot (zero-shot).</strong> Red frames are played backwards; stamps give original recording time. Curves show the signed progress rate (green rising, red falling); dashed lines are the same model on the original video. ReWiND keeps counting up while the task is undone, and KiRoSe's progress falls. These curves use an earlier absolute-progress probe; the table reports the final signed-rate probe.</figcaption>
+    </figure>
+    <div class="two-col">
+      <div class="result-table-block" style="margin:0">
+        <div class="result-table-head"><span class="rt-name">2,586 subtasks from 357 AgiBot episodes</span><span class="rt-note">forward and reversed</span></div>
+        <div class="table-scroll">
+          <table class="result-table" style="min-width:420px">
+            <thead><tr><th class="left">Model</th><th>Fwd. ρ ↑</th><th>Rev. ρ ↓</th><th>Rev. ρ &lt; 0 ↑</th></tr></thead>
+            <tbody>
+              <tr><td class="left">ReWiND (MetaWorld)</td><td class="best">+0.88</td><td>+0.88</td><td>1%</td></tr>
+              <tr><td class="left">ReWiND (Open-X)</td><td>+0.65</td><td>+0.63</td><td>4%</td></tr>
+              <tr><td class="left">Robometer-4B</td><td>+0.71</td><td>+0.06</td><td>46%</td></tr>
+              <tr class="highlight"><td class="left">KiRoSe</td><td>+0.51</td><td class="best">−0.68</td><td class="best">86%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <ul class="bullet-list">
+        <li>The 2.76M-parameter SMT encoder, trained only for transition detection on YAM, stays frozen. A 68k-parameter probe reads its features and the displacement accumulated since the subtask start.</li>
+        <li>The probe is trained on YAM subtasks played forward and in reverse. Neither the encoder nor the probe sees AgiBot.</li>
+        <li>A model that tracks elapsed time stays positive in both directions. KiRoSe's progress falls on 86% of reversed subtasks.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="findings">
+  <div class="container">
+    <h2 class="section-title">Key Findings</h2>
+    <ol class="findings">
+      <li><strong>Kinematics carry the boundaries.</strong> Even reconstruction tokenizers (FAST, OAT) beat a zero-shot video model at locating subtask transitions, and transition-supervised SMTs raise Boundary F1 ±1 s from about 0.42 to 0.63.</li>
+      <li><strong>Transition supervision transfers across bodies.</strong> With only rates in a shared end-effector space, a YAM-trained model keeps most of its boundary accuracy on AgiBot G1 (0.40 vs 0.48 at ±0.5 s) and runs on human hands.</li>
+      <li><strong>Motion gives the action; vision gives the object.</strong> KiRoSe leads GPT-6 Astra on action-level Grounded F1 on AgiBot, and trails on descriptions that need object names.</li>
+      <li><strong>The vocabulary stays open.</strong> On unseen human tasks the reader writes task-appropriate words such as “swab” and “whisk” that never appear in its YAM training annotations.</li>
+      <li><strong>The representation encodes direction.</strong> Frozen SMT-encoder features let a small probe tell forward execution from an action being undone on an unseen robot, where video reward models keep counting up.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="bibtex">
+  <div class="container">
+    <h2 class="section-title">BibTeX</h2>
+    <div class="bibtex-box">
+      <button class="copy-btn" id="copy-bib" type="button" aria-label="Copy BibTeX to clipboard">Copy</button>
+      <pre><code id="bib">@misc{kirose2026,
+    title  = {KiRoSe: Using Kinematic Data for Efficient Segmentation of Robot Demonstrations},
+    author = {Xie, Shuangyu and Chen, Kaiyuan and Irshad, Muhammad Zubair and Cheng, Richard and Zakharov, Sergey and Goldberg, Ken},
+    year   = {2026}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>Page design adapted from the RoboSegNet project page.</p>
+    <p>© KiRoSe authors · <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.sidenav a'));
+  var ids = links.map(function (a) { return a.getAttribute('href').slice(1); });
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function (entries) {
+      var vis = entries.filter(function (e) { return e.isIntersecting; })
+        .sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+      if (vis[0]) links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + vis[0].target.id); });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+    ids.forEach(function (id) { var el = document.getElementById(id); if (el) obs.observe(el); });
+  }
+
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var img = document.getElementById('gallery-img'), cap = document.getElementById('gallery-cap'), panel = document.getElementById('gallery');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (o) { o.setAttribute('aria-selected', o === t ? 'true' : 'false'); });
+      img.src = t.dataset.img; cap.textContent = t.dataset.cap; panel.setAttribute('aria-labelledby', t.id);
+      panel.querySelector('.gallery-frame').scrollTop = 0;
+    });
+  });
+
+  var btn = document.getElementById('copy-bib'), bib = document.getElementById('bib');
+  btn.addEventListener('click', function () {
+    var done = function () { btn.textContent = '✓ Copied'; btn.classList.add('copied'); setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); };
+    var fallback = function () { var r = document.createRange(); r.selectNodeContents(bib); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(bib.textContent).then(done, fallback); else fallback();
+  });
+})();
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var vid = $('vid'), tl = $('tl'), NS = 'http://www.w3.org/2000/svg';
+  var DATA = null, G = null, R = null, rate = 2;
+  var css = function (n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+  var fmt = function (t) { return t.toFixed(1); };
+  var LANES = [['Annotation', 'gt', '--text'], ['KiRoSe', 'kirose', '--accent'], ['Video VLM', 'vlm', '--text-faint']];
+  var TL = { W: 1100, left: 104, right: 12, top: 8, laneH: 30, gapH: 10 };
+  var tx = function (t) { return TL.left + t / R.duration * (TL.W - TL.left - TL.right); };
+  function el(tag, a, p) { var n = document.createElementNS(NS, tag); for (var k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; }
+  function pretty(t) { return /^task_/.test(t) ? t : t.replace(/_/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); }); }
+
+  fetch('static/videos/segments.json').then(function (r) { return r.json(); }).then(function (d) { DATA = d; buildGroups(); pickGroup(0); })
+    .catch(function () { $('eps').textContent = 'The episode data did not load. Reload the page to try again.'; });
+
+  function buildGroups() {
+    DATA.groups.forEach(function (g, i) {
+      var b = document.createElement('button'); b.className = 'tab'; b.type = 'button'; b.id = 'vg-' + g.key;
+      b.textContent = g.label + ' (' + g.note + ')'; b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', function () { pickGroup(i); }); $('vgroups').appendChild(b);
+    });
+  }
+  function pickGroup(i) {
+    G = DATA.groups[i];
+    Array.prototype.forEach.call($('vgroups').children, function (b, k) { b.setAttribute('aria-selected', k === i ? 'true' : 'false'); b.setAttribute('aria-pressed', k === i ? 'true' : 'false'); });
+    var host = $('eps'); host.innerHTML = '';
+    G.runs.forEach(function (r, k) {
+      var b = document.createElement('button'); b.className = 'ep'; b.type = 'button';
+      var name = document.createElement('b'); name.textContent = /^task_\d+$/.test(r.task) && r.instruction ? r.instruction : pretty(r.task); b.appendChild(name);
+      var sm = document.createElement('small'); sm.textContent = fmt(r.duration) + ' s · KiRoSe ' + r.f1.kirose.toFixed(2) + ' · VLM ' + r.f1.vlm.toFixed(2); b.appendChild(sm);
+      b.title = r.instruction || r.task;
+      b.addEventListener('click', function () { pick(k); }); host.appendChild(b);
+    });
+    pick(0);
+  }
+  function pick(k) {
+    R = G.runs[k];
+    Array.prototype.forEach.call($('eps').children, function (b, j) { b.setAttribute('aria-pressed', j === k ? 'true' : 'false'); });
+    vid.src = R.video; vid.playbackRate = rate; $('vplay').textContent = 'Play';
+    $('vinstr').innerHTML = ''; var lb = document.createElement('b'); lb.textContent = 'Instruction: '; $('vinstr').appendChild(lb); $('vinstr').appendChild(document.createTextNode(R.instruction || pretty(R.task)));
+    $('cGt').textContent = R.gt.length + ' segments'; $('cKr').textContent = 'F1 ' + R.f1.kirose.toFixed(2); $('cVl').textContent = 'F1 ' + R.f1.vlm.toFixed(2);
+    $('tlTitle').textContent = (/^task_\d+$/.test(R.task) && R.instruction ? R.instruction : pretty(R.task)) + ' · ' + fmt(R.duration) + ' s' + (R.paper_figure ? ' · shown in the paper' : '');
+    tl.setAttribute('aria-valuemax', R.duration.toFixed(1));
+    draw(); update();
+  }
+  function draw() {
+    tl.innerHTML = '';
+    var yAx = TL.top + LANES.length * (TL.laneH + TL.gapH), H = yAx + 26;
+    tl.setAttribute('viewBox', '0 0 ' + TL.W + ' ' + H);
+    var border = css('--border'), dim = css('--text-dim'), faint = css('--text-faint');
+    LANES.forEach(function (L, li) {
+      var y = TL.top + li * (TL.laneH + TL.gapH), c = css(L[2]);
+      var t = el('text', { x: 0, y: y + TL.laneH / 2 + 5, 'font-size': 14, 'font-weight': 700, fill: c, 'font-family': 'Inter, sans-serif' }, tl); t.textContent = L[0];
+      el('rect', { x: TL.left, y: y, width: TL.W - TL.left - TL.right, height: TL.laneH, fill: border, opacity: 0.45, rx: 4 }, tl);
+      R[L[1]].forEach(function (s, k) {
+        var x0 = tx(Math.max(0, s.s)), x1 = tx(Math.min(R.duration, s.e));
+        var r = el('rect', { x: x0 + 0.5, y: y + 2, width: Math.max(1, x1 - x0 - 1), height: TL.laneH - 4, fill: c, opacity: k % 2 ? 0.45 : 0.75, rx: 3 }, tl);
+        el('title', {}, r).textContent = fmt(s.s) + '–' + fmt(s.e) + ' s  ' + s.d;
+      });
+    });
+    var step = R.duration > 150 ? 30 : R.duration > 60 ? 20 : 10;
+    for (var s = 0; s <= R.duration; s += step) {
+      el('line', { x1: tx(s), x2: tx(s), y1: yAx, y2: yAx + 5, stroke: faint }, tl);
+      el('text', { x: tx(s), y: yAx + 19, 'font-size': 12, 'text-anchor': 'middle', fill: dim, 'font-family': 'Inter, sans-serif' }, tl).textContent = s + ' s';
+    }
+    el('line', { id: 'ph', x1: tx(0), x2: tx(0), y1: 2, y2: yAx, stroke: css('--accent-2'), 'stroke-width': 2.5 }, tl);
+  }
+  function at(segs, t) { for (var i = 0; i < segs.length; i++) if (segs[i].s <= t && t < segs[i].e) return segs[i]; return null; }
+  function setNow(id, sp, seg) {
+    var d = $(id);
+    if (seg) { d.textContent = seg.d || '(no description)'; d.className = 'desc'; $(sp).textContent = fmt(seg.s) + '–' + fmt(seg.e) + ' s'; }
+    else { d.textContent = 'no segment here'; d.className = 'desc none'; $(sp).textContent = ''; }
+  }
+  function update() {
+    if (!R) return;
+    var t = vid.currentTime || 0;
+    setNow('nGt', 'sGt', at(R.gt, t)); setNow('nKr', 'sKr', at(R.kirose, t)); setNow('nVl', 'sVl', at(R.vlm, t));
+    $('vclock').textContent = fmt(t) + ' / ' + fmt(R.duration) + ' s';
+    var ph = document.getElementById('ph'); if (ph) { ph.setAttribute('x1', tx(Math.min(t, R.duration))); ph.setAttribute('x2', tx(Math.min(t, R.duration))); }
+    tl.setAttribute('aria-valuenow', t.toFixed(1));
+  }
+  function loop() { update(); if (!vid.paused) requestAnimationFrame(loop); }
+  function toggle() {
+    if (vid.paused) { var p = vid.play(); if (p && p.then) p.then(function () { $('vplay').textContent = 'Pause'; loop(); }).catch(function () {}); else { $('vplay').textContent = 'Pause'; loop(); } }
+    else { vid.pause(); $('vplay').textContent = 'Play'; }
+  }
+  function seek(e) {
+    var b = tl.getBoundingClientRect(), x = (e.clientX - b.left) / b.width * TL.W;
+    vid.currentTime = Math.max(0, Math.min(R.duration, (x - TL.left) / (TL.W - TL.left - TL.right) * R.duration)); update();
+  }
+  var drag = false;
+  tl.addEventListener('pointerdown', function (e) { drag = true; tl.setPointerCapture(e.pointerId); seek(e); });
+  tl.addEventListener('pointermove', function (e) { if (drag) seek(e); });
+  tl.addEventListener('pointerup', function () { drag = false; });
+  tl.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { vid.currentTime = Math.max(0, Math.min(R.duration, vid.currentTime + (e.key === 'ArrowRight' ? 1 : -1))); update(); e.preventDefault(); }
+    if (e.key === ' ') { toggle(); e.preventDefault(); }
+  });
+  $('vplay').addEventListener('click', toggle);
+  $('vrate').addEventListener('click', function () { rate = rate === 1 ? 2 : rate === 2 ? 4 : 1; vid.playbackRate = rate; $('vrate').textContent = 'Speed ' + rate + '×'; });
+  vid.addEventListener('seeked', update); vid.addEventListener('loadeddata', update); vid.addEventListener('timeupdate', update);
+  vid.addEventListener('ended', function () { $('vplay').textContent = 'Play'; });
+})();
+</script>
+<script>
+/* Title figure: live segmentation player cycling through episodes, and the accuracy-vs-cost plot. */
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var vid = document.getElementById('liveVid'), desc = document.getElementById('liveDesc'), chip = document.getElementById('liveChip');
+  var laneGt = document.getElementById('laneGt'), laneKr = document.getElementById('laneKr'), head = document.getElementById('liveHead');
+  var task = document.getElementById('liveTask'), dots = document.getElementById('liveDots');
+  var list = [], k = 0, cur = null, started = 0, MAXWALL = 15000, RATE = 3;
+  function lane(el, segs, T) {
+    el.innerHTML = '';
+    segs.forEach(function (g) { var i = document.createElement('i'); i.style.left = (100 * g.s / T) + '%'; i.style.width = (100 * (g.e - g.s) / T) + '%'; el.appendChild(i); });
+  }
+  function load(n) {
+    k = (n + list.length) % list.length; cur = null; var next = list[k];
+    vid.classList.add('fade'); desc.textContent = '\u00a0'; started = Date.now();
+    setTimeout(function () {
+      cur = next; vid.src = cur.video; vid.load(); head.style.left = laneGt.offsetLeft + 'px';
+      chip.textContent = cur.label;
+      task.textContent = (cur.instruction || cur.task) + ' · boundary F1 ±1 s: KiRoSe ' + cur.f1.kirose.toFixed(2);
+      lane(laneGt, cur.gt, cur.duration); lane(laneKr, cur.kirose, cur.duration);
+      Array.prototype.forEach.call(dots.children, function (b, i) { b.className = i === k ? 'on' : ''; });
+    }, reduce ? 0 : 300);
+  }
+  vid.addEventListener('loadedmetadata', function () {
+    vid.playbackRate = RATE; vid.classList.remove('fade'); started = Date.now();
+    if (!reduce) { var p = vid.play(); if (p && p.catch) p.catch(function () {}); }
+  });
+  vid.addEventListener('timeupdate', function () {
+    if (!cur) return;
+    var t = vid.currentTime, T = cur.duration, w = laneGt.getBoundingClientRect().width, x0 = laneGt.offsetLeft;
+    head.style.left = (x0 + w * Math.min(1, t / T)) + 'px';
+    var seg = null; cur.kirose.forEach(function (g) { if (t >= g.s && t < g.e) seg = g; });
+    desc.textContent = seg && seg.d ? seg.d.replace(/\.$/, '') : '…';
+    Array.prototype.forEach.call(laneKr.children, function (el, i) { el.className = cur.kirose[i] === seg ? 'on' : ''; });
+    if (!reduce && Date.now() - started > MAXWALL) load(k + 1);
+  });
+  vid.addEventListener('ended', function () { if (!reduce) load(k + 1); });
+  vid.addEventListener('error', function () { if (!reduce) setTimeout(function () { load(k + 1); }, 1500); });
+  fetch('static/videos/segments.json').then(function (r) { return r.json(); }).then(function (d) {
+    var byG = d.groups.map(function (g) { return g.runs.filter(function (r) { return r.duration <= 70; }).map(function (r) { return Object.assign({ label: g.label }, r); }); });
+    for (var i = 0; i < 3; i++) byG.forEach(function (g) { if (g[i]) list.push(g[i]); });
+    list.forEach(function () { dots.appendChild(document.createElement('b')); });
+    load(0);
+  });
+})();
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('costPlot');
+  function el(t, a, txt) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
+  var L = 52, R = 405, T = 22, B = 282, lo = -4, hi = Math.log10(3), ylo = 0.45, yhi = 0.80;
+  var X = function (c) { return L + (R - L) * (Math.log10(c) - lo) / (hi - lo); }, Y = function (v) { return B - (B - T) * (v - ylo) / (yhi - ylo); };
+  [1e-4, 1e-3, 1e-2, 1e-1, 1].forEach(function (c) {
+    el('line', { x1: X(c), x2: X(c), y1: T, y2: B, 'class': 'gl' });
+    el('text', { x: X(c), y: B + 16, 'text-anchor': 'middle', 'class': 'tk' }, '$' + (c < 0.01 ? c.toExponential(0).replace('e-', 'e−') : c));
+  });
+  [0.5, 0.6, 0.7, 0.8].forEach(function (v) {
+    el('line', { x1: L, x2: R, y1: Y(v), y2: Y(v), 'class': 'gl' });
+    el('text', { x: L - 8, y: Y(v) + 4, 'text-anchor': 'end', 'class': 'tk' }, v.toFixed(1));
+  });
+  el('line', { x1: L, x2: R, y1: B, y2: B, 'class': 'ax' });
+  el('text', { x: (L + R) / 2, y: B + 38, 'text-anchor': 'middle' }, 'cost per trajectory (USD, log scale)');
+  el('text', { x: 14, y: (T + B) / 2, transform: 'rotate(-90 14 ' + (T + B) / 2 + ')', 'text-anchor': 'middle' }, 'boundary F1 within ±1 s');
+  var kc = 0.16 / 3600 * 3.5;
+  var P = [
+    { n: 'KiRoSe', c: kc, yam: 0.666, agi: 0.772, col: '#2563eb', lx: 12, ly: 0.719, a: 'start' },
+    { n: 'Claude Opus 5.5', c: 0.33, yam: 0.495, agi: 0.669, col: '#1baf7a', lx: -11, ly: 0.669, a: 'end' },
+    { n: 'GPT-6 Astra', c: 1.01, yam: 0.601, agi: 0.544, col: '#eb6834', lx: -11, ly: 0.601, a: 'end' }
+  ];
+  el('line', { x1: X(kc), x2: X(0.33), y1: Y(0.79), y2: Y(0.79), stroke: 'var(--text-faint)', 'stroke-dasharray': '3 3' });
+  el('text', { x: (X(kc) + X(0.33)) / 2, y: Y(0.79) - 6, 'text-anchor': 'middle', 'class': 'tk' }, '≈2,000–6,500× cheaper');
+  P.forEach(function (p) {
+    var a = el('circle', { cx: X(p.c), cy: Y(p.yam), r: 7, fill: p.col, stroke: '#fff', 'stroke-width': 2 });
+    var b = el('circle', { cx: X(p.c), cy: Y(p.agi), r: 6, fill: '#fff', stroke: p.col, 'stroke-width': 2.5 });
+    a.appendChild(document.createElementNS(NS, 'title')).textContent = p.n + ' · YAM (50): ' + p.yam.toFixed(3);
+    b.appendChild(document.createElementNS(NS, 'title')).textContent = p.n + ' · AgiBot (20, zero-shot): ' + p.agi.toFixed(3);
+    el('text', { x: X(p.c) + p.lx, y: Y(p.ly) + 4, 'text-anchor': p.a, 'class': 'lab', fill: p.col }, p.n);
+  });
+  el('text', { x: L + 6, y: B - 8, 'class': 'tk' }, '← cheaper, ↑ more accurate');
+})();
+</script>
+</body>
+</html>

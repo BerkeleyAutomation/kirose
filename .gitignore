@@ -1,0 +1,6 @@
+# local scratch from the build scripts
+tools/.frames/
+tools/.index.*.html
+tools/.smt_pool.json
+__pycache__/
+.DS_Store
