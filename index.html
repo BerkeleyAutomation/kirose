@@ -338,7 +338,7 @@ section.tight{padding-block:48px}
     <li><a href="#results"><span class="dot"></span><span class="lbl">Segmentation</span></a></li>
     <li><a href="#transfer"><span class="dot"></span><span class="lbl">Cross-Embodiment</span></a></li>
     <li><a href="#progress"><span class="dot"></span><span class="lbl">Progress</span></a></li>
-    <li><a href="#findings"><span class="dot"></span><span class="lbl">Key Findings</span></a></li>
+    <li><a href="#summary"><span class="dot"></span><span class="lbl">Summary</span></a></li>
     <li><a href="#bibtex"><span class="dot"></span><span class="lbl">BibTeX</span></a></li>
   </ul>
 </nav>
@@ -617,16 +617,10 @@ section.tight{padding-block:48px}
   </div>
 </section>
 
-<section class="band" id="findings">
+<section class="band" id="summary">
   <div class="container">
-    <h2 class="section-title">Key Findings</h2>
-    <ol class="findings">
-      <li><strong>Kinematics carry the boundaries.</strong> Even reconstruction tokenizers (FAST, OAT) beat a zero-shot video model at locating subtask transitions, and transition-supervised SMTs raise Boundary F1 ±1 s from about 0.42 to 0.63.</li>
-      <li><strong>Transition supervision transfers across bodies.</strong> With only rates in a shared end-effector space, a YAM-trained model keeps most of its boundary accuracy on AgiBot G1 (0.40 vs 0.48 at ±0.5 s) and runs on human hands.</li>
-      <li><strong>Motion gives the action; vision gives the object.</strong> KiRoSe leads GPT-6 Astra on action-level Grounded F1 on AgiBot, and trails on descriptions that need object names.</li>
-      <li><strong>The vocabulary stays open.</strong> On unseen human tasks the reader writes task-appropriate words such as “swab” and “whisk” that never appear in its YAM training annotations.</li>
-      <li><strong>The representation encodes direction.</strong> Frozen SMT-encoder features let a small probe tell forward execution from an action being undone on an unseen robot, where video reward models keep counting up.</li>
-    </ol>
+    <h2 class="section-title">Summary</h2>
+    <p class="section-intro">KiRoSe shows that a robot's own end-effector kinematics are enough to segment its demonstrations. Compressed into two Sparse Motion Tokens per second, kinematics locate subtask boundaries better than a zero-shot video model, and transition supervision raises Boundary F1 ±1 s from about 0.42 to 0.63. Because the tokens live in a shared end-effector space, a model trained only on YAM keeps most of its boundary accuracy on AgiBot G1 and runs on human hands, while its open-vocabulary reader writes task words it never saw in training. Motion supplies the action and vision the object: KiRoSe leads GPT-6 Astra on action-level Grounded F1 and trails it where descriptions need object names. The same frozen encoder also tells forward execution from an action being undone, which video reward models miss, all at a small fraction of the cost of video-based segmentation.</p>
   </div>
 </section>
 
