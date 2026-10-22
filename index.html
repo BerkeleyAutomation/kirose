@@ -319,6 +319,8 @@ section.tight{padding-block:48px}
 .hero.kfm .caption{max-width:none;margin:32px 0 0}
 .bullet-list{margin:0}
 .two-col .caption{text-align:left}
+.hero.kfm h1.kfm-title{margin-bottom:22px}
+.kfm-btns{margin:0 0 52px}
 </style>
 </head>
 <body>
@@ -349,6 +351,12 @@ section.tight{padding-block:48px}
 <header class="hero kfm" id="top">
   <div class="container wide">
     <h1 class="kfm-title"><span class="grad">KiRoSe</span> <span class="kfm-dash">—</span> Towards Kinematic Foundation Model</h1>
+    <div class="btn-row kfm-btns">
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
+      <a class="btn disabled" href="#" aria-disabled="true" title="Released with the arXiv version"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
+      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
+    </div>
     <div class="teaser-grid two">
       <div class="live-card">
         <div class="card-title">Segmentation from kinematics alone</div>
@@ -387,12 +395,6 @@ section.tight{padding-block:48px}
     </div>
     <div class="affiliations"><span><sup>1</sup>University of California, Berkeley</span> &nbsp; <span><sup>2</sup>Toyota Research Institute</span></div>
     <div class="hero-logos"><img src="static/images/logos/berkeley.png" alt="University of California, Berkeley"><img src="static/images/logos/tri.png" alt="Toyota Research Institute"></div>
-    <div class="btn-row">
-      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
-      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
-      <a class="btn disabled" href="#" aria-disabled="true" title="Released with the arXiv version"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
-      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
-    </div>
   </div>
 </section>
 
@@ -579,21 +581,6 @@ section.tight{padding-block:48px}
       </ul>
     </div>
 
-    <h3 class="sub-title">Unseen-task vocabulary on human hands</h3>
-    <p class="sub-intro">On Ego-Exo4D the reader sees only the task name and motion tokens. A <em>supplied</em> word appears in that task's human annotations but never in YAM training data or the prompt. Such words occur in 6 of 12 tasks, which indicates that YAM adaptation keeps the language model's open vocabulary.</p>
-    <div class="table-scroll">
-      <table class="result-table">
-        <thead><tr><th class="left">Task</th><th>Trajectories</th><th>Hits</th><th class="left">Supplied words</th></tr></thead>
-        <tbody>
-          <tr><td class="left">Omelet</td><td>36</td><td>17</td><td class="left">pan, egg, mixture, whisk</td></tr>
-          <tr><td class="left">COVID-19 test</td><td>65</td><td>14</td><td class="left">swab</td></tr>
-          <tr><td class="left">Tomato &amp; eggs</td><td>12</td><td>11</td><td class="left">pan</td></tr>
-          <tr><td class="left">Flat tire</td><td>13</td><td>8</td><td class="left">inner (tube), lever</td></tr>
-          <tr><td class="left">Noodles</td><td>9</td><td>3</td><td class="left">pot, stir</td></tr>
-          <tr><td class="left">Salad</td><td>26</td><td>2</td><td class="left">toss, dressing</td></tr>
-        </tbody>
-      </table>
-    </div>
   </div>
 </section>
 
