@@ -4,7 +4,7 @@ Episodes: the paper's appendix picks (appendix_kf/picks_*.json) first, then more
 own rule (plot_seg_examples.select: round-robin over tasks, episode closest to the task's median KiRoSe
 BF1 at 1 s; not score-maximising). Human hands reuse the 8 Ego-Exo4D clips of the Hand Segmentation Viewer.
 
-  python3 tools/build_videos.py --per 8 --handviewer <dir with viewer_data.json and clips/>
+  python3 tools/build_videos.py --per 6 --handviewer <dir with viewer_data.json and clips/>
   -> static/videos/{agibot,yam,human}/<id>.mp4, static/videos/segments.json
 """
 import argparse, json, statistics, subprocess
@@ -91,7 +91,7 @@ def robot(name, ours, base, picks_file, video_of, per, instr_of):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--per", type=int, default=8)
+    ap.add_argument("--per", type=int, default=6)
     ap.add_argument("--handviewer", type=Path, required=True)
     a = ap.parse_args()
     kf = TSV / "appendix_kf"
