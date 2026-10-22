@@ -8,7 +8,7 @@
 import json, subprocess, sys, tempfile
 from pathlib import Path
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import matplotlib; matplotlib.use("Agg"); from matplotlib import cm
 
 SITE = Path(__file__).resolve().parent.parent; ROOT = Path.home() / "traj_seg_vlm"; OUT = SITE / "static/media"
@@ -17,11 +17,13 @@ FPS, W, H, S = 15, 1280, 720, 2
 FONT, BOLD = TD.FONT, TD.BOLD; MONO = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 f = lambda p, s: ImageFont.truetype(p, int(s * S))
 BG, INK, DIM, FAINT, CARD, RULE, ACC, ORG = TD.BG, TD.INK, TD.DIM, TD.FAINT, TD.CARD, TD.RULE, TD.ACC, TD.ORG
+BG = (255, 255, 255)                                  # white video background
+RED = (220, 38, 38)
 TEAL, HL, ELEV = (14, 165, 181), (226, 236, 252), (236, 243, 253)
 FLORA, OPUS, ASTRA = (194, 24, 122), (27, 175, 122), (235, 104, 52)
 LIGHT = (147, 197, 253)
 ease = TD.ease
-SCENES = [("title", 4.0), ("pipeline", 15.0), ("download", 6.5)]
+SCENES = [("title", 4.0), ("kinonly", 5.5), ("pipeline", 15.0), ("download", 6.5)]
 FADE = 0.4
 
 
@@ -78,12 +80,13 @@ def load():
     main = runs["655509"]
     z = np.load(ROOT / "data/cache_signed2_agibot/655509.npz")
     kin = [(z["t"], np.convolve(np.linalg.norm(z[f"feat_{a}"][:, :3], axis=1), np.ones(5) / 5, "same")) for a in ("left", "right")]
+    kin14 = (z["t"], np.concatenate([z["feat_left"], z["feat_right"]], axis=1))
     codes = json.load(open(ROOT / "kin_codes_signed_trainonly/655509.json"))
     bodies = [("YAM", "held-out task", runs["episode_abe6954f-1a1e-46e6-a410-a2fce60a1374"], 8.0),
               ("AgiBot G1", "zero-shot robot", runs["648680"], 2.0),
               ("Human hands", "zero-shot, Ego-Exo4D", runs["37081591-1f5f-454f-b2a4-bfdcec5ccca6_r55"], 4.0)]
     vids = {r["id"]: frames_of(SITE / r["video"]) for r in [main] + [b[2] for b in bodies]}
-    return dict(main=main, kin=kin, codes=codes, bodies=bodies, vids=vids, td=TD.load())
+    return dict(main=main, kin=kin, kin14=kin14, codes=codes, bodies=bodies, vids=vids, td=TD.load())
 
 
 # ---------- scenes: each takes (im, d, t, dur, D) ----------
@@ -94,22 +97,69 @@ def s_title(im, d, t, dur, D):
     T(d, (W / 2, 450), "A paper and an open model", f(FONT, 24), mix(BG, DIM, c), "ma")
 
 
+def traces(d, D, x, y, w, h, upto, rows=14):
+    """The 14 kinematic channels as stacked sparklines (left arm ink, right arm orange), drawn up to time `upto`."""
+    tt, X = D["kin14"]; Tep = D["main"]["duration"]; sel = tt <= upto
+    if sel.sum() < 2: return
+    rh = h / rows
+    for c in range(rows):
+        v = X[sel, c][::2]; ts = tt[sel][::2]; m = np.abs(X[:, c]).max() + 1e-6; yc = y + (c + 0.5) * rh
+        line(d, [(x + w * a / Tep, yc - 0.45 * rh * b / m) for a, b in zip(ts, v)], fill=INK if c < 7 else ORG, width=int(1.3 * S))
+
+
+def s_kinonly(im, d, t, dur, D):
+    a = ease(t / 0.6)
+    T(d, (W / 2, 48), "KiRoSe never sees the video", f(BOLD, 40), mix(BG, INK, a), "ma")
+    T(d, (W / 2, 106), "Its only input is the robot's kinematic state: end-effector velocities and gripper motion, 14 channels.",
+      f(FONT, 19), mix(BG, DIM, a), "ma")
+    # left: camera video, crossed out
+    vx, vy, vw, vh = 96, 170, 480, 360
+    fr = D["vids"][D["main"]["id"]][60]; img = fit(fr, vw, vh)
+    g = ease((t - 0.9) / 0.6)
+    if g > 0: img = Image.blend(img, ImageOps.grayscale(img).convert("RGB"), g); img = Image.blend(img, Image.new("RGB", img.size, BG), 0.55 * g)
+    paste_round(im, img, vx, vy, r=16)
+    if g > 0:
+        cx, cy, k = vx + vw / 2, vy + vh / 2, 70 * g
+        line(d, [(cx - k, cy - k), (cx + k, cy + k)], fill=RED, width=10 * S); line(d, [(cx - k, cy + k), (cx + k, cy - k)], fill=RED, width=10 * S)
+    T(d, (vx + vw / 2, vy + vh + 18), "Camera video", f(BOLD, 20), DIM, "ma")
+    T(d, (vx + vw / 2, vy + vh + 46), "not used", f(BOLD, 20), mix(BG, RED, g), "ma")
+    # right: kinematic traces, the only input
+    kx, ky, kw, kh = 704, 170, 480, 360; b = ease((t - 0.4) / 0.6)
+    R(d, kx, ky, kx + kw, ky + kh, r=16, fill=mix(BG, (239, 245, 255), b), outline=mix(BG, ACC, b), width=3 * S)
+    traces(d, D, kx + 20, ky + 16, kw - 40, kh - 32, D["main"]["duration"] * ease((t - 0.5) / 2.5))
+    T(d, (kx + kw / 2, ky + kh + 18), "Kinematic state", f(BOLD, 20), mix(BG, INK, b), "ma")
+    T(d, (kx + kw / 2, ky + kh + 46), "the only input", f(BOLD, 20), mix(BG, ACC, b), "ma")
+    c = ease((t - 2.6) / 0.5)
+    if c > 0:
+        R(d, W / 2 - 330, 626, W / 2 + 330, 690, r=32, fill=mix(BG, ACC, c))
+        T(d, (W / 2, 640), "Only kinematic state is used", f(BOLD, 28), mix(ACC, (255, 255, 255), c), "ma")
+
+
 def s_pipeline(im, d, t, dur, D):
     r = D["main"]; Tep = r["duration"]
     play = min(max((t - 0.8) / (dur - 2.0), 0), 1) * Tep
-    T(d, (W / 2, 44), "Give it a robot's motion. It tells you what happened, and when.", f(BOLD, 30), INK, "ma")
-    vx, vy, vw, vh = 48, 120, 600, 450
-    fr = D["vids"][r["id"]]; paste_round(im, fit(fr[min(int(play * 5), len(fr) - 1)], vw, vh), vx, vy, r=16)
+    T(d, (W / 2, 44), "Annotate robot data with kinematic state only", f(BOLD, 30), INK, "ma")
+    vx, vy, vw, vh = 48, 120, 600, 360
+    fr = D["vids"][r["id"]]; img = fit(fr[min(int(play * 5), len(fr) - 1)], vw, vh)
+    paste_round(im, Image.blend(img, Image.new("RGB", img.size, BG), 0.15), vx, vy, r=16)
     chip(d, vx + 14, vy + 14, f'{r["instruction"].upper()}  ·  {mmss(play)}', size=12)
+    chip(d, vx + 14, vy + vh - 40, "VIDEO: FOR YOU TO WATCH, NOT USED BY THE MODEL", size=11)
+    # the actual model input, highlighted
+    ix, iy, ih = vx, vy + vh + 16, 170
+    R(d, ix, iy, ix + vw, iy + ih, r=14, fill=(239, 245, 255), outline=ACC, width=3 * S)
+    R(d, ix + 14, iy + 12, ix + 318, iy + 40, r=14, fill=ACC)
+    T(d, (ix + 28, iy + 18), "MODEL INPUT: KINEMATIC STATE ONLY", f(BOLD, 13), (255, 255, 255))
+    traces(d, D, ix + 16, iy + 48, vw - 32, ih - 60, play)
     ox, oy, ow = 680, 120, W - 48 - 680
+    R(d, ox, oy, ox + 318, oy + 28, r=14, fill=INK)
+    T(d, (ox + 14, oy + 6), "OUTPUT: TIMED ANNOTATIONS", f(BOLD, 13), (255, 255, 255))
     for k, g in enumerate(r["kirose"]):
-        y = oy + k * 56
+        y = oy + 44 + k * 56
         if play < g["s"]: break
         on = g["s"] <= play < g["e"]; a = ease((play - g["s"]) / 1.0)
         if on: R(d, ox, y, ox + ow, y + 46, r=10, fill=HL)
         T(d, (ox + 16, y + 6), f'{mmss(g["s"])} – {mmss(g["e"])}', f(MONO, 12), mix(BG, ACC if on else FAINT, a))
         T(d, (ox + 16, y + 22), g["d"].rstrip("."), f(BOLD if on else FONT, 16), mix(BG, INK if on else DIM, a))
-    T(d, (W / 2, 610), "The model reads only end-effector motion. The video is for reference.", f(FONT, 16), FAINT, "ma")
 
 
 def s_bodies(im, d, t, dur, D):
