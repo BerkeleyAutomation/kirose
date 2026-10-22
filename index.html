@@ -280,6 +280,38 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .prog-row .pz{stroke:var(--text-faint);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
 .prog-row .pl{fill:none;stroke:#0ea5b5;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 #laneGt i.fwd{background:#2563eb}#laneGt i.rev{background:#eb6834}
+
+/* breathing room: no cards around the title-figure panels, wider gaps, roomier sections */
+.teaser-grid.two .live-card,.teaser-grid.two .cost-card{background:none;border:none;box-shadow:none;padding:0}
+.teaser-grid.two{gap:clamp(28px,4vw,64px)}
+.hero.kfm{padding-block:72px 64px}
+.hero h1.kfm-title{margin-bottom:48px}
+.hero.kfm .caption{margin-top:32px;max-width:980px;margin-left:auto;margin-right:auto}
+.card-title{margin:0 0 16px}
+.teaser-grid.two .live-stage{border-radius:14px}
+section{padding-block:80px}
+section.tight{padding-block:48px}
+.section-intro{margin-bottom:40px}
+.teaser-wrap{box-shadow:none}
+.tldr-box{box-shadow:none}
+.paper-head{padding-block:64px 56px}
+/* SMT construction diagram */
+.net-wrap{overflow-x:auto;margin:8px 0 18px}
+#smtNet{display:block;width:100%;min-width:760px;height:auto}
+#smtNet text{font-family:var(--font);fill:var(--text-dim);font-size:13.5px}
+#smtNet .h{font-weight:800;font-size:17px;fill:var(--text)}
+#smtNet .s{font-size:12.5px;fill:var(--text-faint)}
+#smtNet .mono{font-family:var(--mono);font-size:12.5px}
+#smtNet .e{stroke:#dbe4f0;stroke-width:1}
+#smtNet .e.on{stroke:#2563eb;stroke-width:1.8}
+#smtNet .n{fill:#fff;stroke:#b8c6da;stroke-width:1.5}
+#smtNet .n.on{fill:#2563eb;stroke:#2563eb}
+#smtNet .n.out.on{fill:#0ea5b5;stroke:#0ea5b5}
+#smtNet .cen{fill:#c9d4e4}
+#smtNet .ring{fill:none;stroke-width:2.5;opacity:0}
+#smtNet .ring.on{opacity:1}
+#smtNet .chip{opacity:.12}
+#smtNet .chip.on{opacity:1}
 </style>
 </head>
 <body>
@@ -376,6 +408,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <div class="container">
     <h2 class="section-title">Sparse Motion Tokens</h2>
     <p class="section-intro">The same motion makes the same tokens. Recurring kinematic events, such as a bimanual lift, a handover, a pick or a place, map to recurring codes across tasks and objects.</p>
+    <h3 class="sub-title" style="text-align:center;margin-top:0">How a Sparse Motion Token is made</h3>
+    <div class="net-wrap"><svg id="smtNet" viewBox="0 0 1200 480" role="img" aria-label="Diagram: 14-channel kinematics feed a dilated temporal convolution encoder trained to detect subtask transitions; its features are pooled to 2 per second and snapped to the nearest of 512 k-means centroids, giving motion tokens such as k438, k456, k445, k431 and k296 that a Qwen3.5-9B reader turns into timed subtasks."></svg></div>
+    <p class="caption caption-wide" style="margin-bottom:56px"><strong>From motion to tokens.</strong> ① End-effector kinematics (14 channels at 30&nbsp;Hz). ② A dilated temporal convolution encoder: each layer doubles its dilation, so one output feature sees seconds of motion around it (highlighted). ③ During training only, a head on these features predicts where annotated subtasks change (focal loss on soft targets around each boundary); afterwards the head is dropped and the encoder is frozen. ④ Features are pooled to 2 per second and snapped to the nearest of 512 k-means centroids. ⑤ The resulting token stream, plus the task instruction, is what the Qwen3.5-9B reader sees. Illustration: 3 layers with kernel 3; the real encoder has 7 blocks with kernel 5 and dilations 1&ndash;64 (17&nbsp;s receptive field, 2.76M parameters).</p>
     <div class="teaser-wrap"><video class="smt-anim" autoplay muted loop playsinline preload="auto" poster="static/media/smt_motion_poster.png" aria-label="Four motion categories, each shown in two YAM clips from different tasks; tokens light up in sync with the robot, and lines then join the codes both clips share in the same order"><source src="static/media/smt_motion.webm" type="video/webm"><source src="static/media/smt_motion.mp4" type="video/mp4"><img src="static/media/smt_motion.gif" alt="Animated Sparse Motion Tokens figure"></video></div>
     <p class="caption caption-wide"><strong>Figure 1. Recurring motion, recurring tokens.</strong> Each panel shows one kinematic event in two YAM episodes from different tasks (A, B). Sparse Motion Tokens appear in sync with the robot (2 per second, from a 512-code vocabulary) on a shared time axis. When the clips end, lines join the tokens the two rows share <em>in the same order</em> (their longest common subsequence), and the shared sequence is spelled out: a single-arm pick-up is 438 → 456 → 445 → 431 → 296 in both tasks, and a single-arm place is 126 → 308 → 443 → 48 → 208. Pairs are chosen examples; across all held-out segments, clips of the same motion category share about twice as many codes as clips of different categories. A GIF version is at <a href="static/media/smt_motion.gif">static/media/smt_motion.gif</a>.</p>
   </div>
@@ -878,6 +913,99 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   });
   bracket(kc, 0.00766, T - 14 + 18, '≈50× cheaper than Flora', '#c2187a');
   bracket(kc, 0.33, B - 12, '≈2,000–6,500× cheaper than API models', 'var(--text-dim)');
+})();
+</script>
+<script>
+/* SMT construction diagram: dilated conv encoder scanning the kinematics, transition head (training only), pooling to
+   2 Hz, nearest-centroid quantization, token stream into the reader. Illustrative sizes (3 layers, kernel 3). */
+(function () {
+  var svg = document.getElementById('smtNet'); if (!svg) return;
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(t, a, txt, parent) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; (parent || svg).appendChild(e); return e; }
+  var N = 17, X = function (i) { return 172 + i * 28.2; }, LY = [372, 318, 258, 198, 138], DIL = [1, 2, 4];
+  // titles and row labels
+  el('text', { x: 20, y: 30, 'class': 'h' }, 'Transition-supervised encoder');
+  el('text', { x: 20, y: 48, 'class': 's' }, 'trained on 5,478 YAM episodes, then frozen');
+  [['① kinematics', 430], ['inputs', LY[0] + 4], ['② layer 1 · dilation 1', LY[1] + 4], ['② layer 2 · dilation 2', LY[2] + 4], ['② layer 3 · dilation 4', LY[3] + 4], ['features (every 0.25 s)', LY[4] + 4], ['③ transition head', 86]].forEach(function (r) {
+    el('text', { x: 20, y: r[1], 'class': r[0].indexOf('③') === 0 ? 'mono' : '' }, r[0]);
+  });
+  el('text', { x: 20, y: 102, 'class': 's' }, 'training only');
+  // kinematic traces under the input nodes
+  var band = el('rect', { x: X(0) - 10, y: 392, width: X(N - 1) - X(0) + 20, height: 70, rx: 8, fill: '#f1f5fb' });
+  var win = el('rect', { x: 0, y: 392, width: 0, height: 70, rx: 8, fill: 'rgba(37,99,235,.12)', stroke: 'rgba(37,99,235,.45)' });
+  [['#334155', 0], ['#eb6834', 1.7], ['#0ea5b5', 3.1]].forEach(function (c, ci) {
+    var pts = [];
+    for (var q = 0; q <= 120; q++) { var x = X(0) - 6 + q * (X(N - 1) - X(0) + 12) / 120, u = q / 120 * 9;
+      pts.push(x.toFixed(1) + ',' + (427 + 11 * Math.sin(u * 1.3 + c[1]) * Math.cos(u * 0.37 + ci) + 6 * Math.sin(u * 3.1 + ci * 2)).toFixed(1)); }
+    el('polyline', { points: pts.join(' '), fill: 'none', stroke: c[0], 'stroke-width': 1.6, opacity: 0.85 });
+  });
+  el('text', { x: X(N - 1) + 18, y: 412, 'class': 's' }, 'v, ω, ġ');
+  el('text', { x: X(N - 1) + 18, y: 428, 'class': 's' }, '× 2 arms');
+  el('text', { x: X(N - 1) + 18, y: 444, 'class': 's' }, '30 Hz');
+  // edges: node i in layer l+1 <- nodes i-d, i, i+d in layer l (kernel 3, dilation d); output row <- layer 3 (1x1)
+  var E = [], nodes = [];
+  for (var l = 0; l < 3; l++) for (var i = 0; i < N; i++) [-DIL[l], 0, DIL[l]].forEach(function (o) {
+    var j = i + o; if (j >= 0 && j < N) E.push({ l: l, i: i, j: j, el: el('line', { x1: X(j), y1: LY[l], x2: X(i), y2: LY[l + 1], 'class': 'e' }) });
+  });
+  for (i = 0; i < N; i++) E.push({ l: 3, i: i, j: i, el: el('line', { x1: X(i), y1: LY[3], x2: X(i), y2: LY[4], 'class': 'e' }) });
+  for (l = 0; l < 5; l++) { nodes.push([]); for (i = 0; i < N; i++) nodes[l].push(el('circle', { cx: X(i), cy: LY[l], r: l === 4 ? 6.5 : 5.5, 'class': 'n' + (l === 4 ? ' out' : '') })); }
+  // transition head: soft targets around two annotated boundaries
+  var B1 = 5, B2 = 12, head = el('polyline', { fill: 'none', stroke: '#0ea5b5', 'stroke-width': 2.2, points: '' });
+  el('line', { x1: X(0), x2: X(N - 1), y1: 104, y2: 104, stroke: '#cbd5e1', 'stroke-dasharray': '3 3' });
+  [B1, B2].forEach(function (b) { el('line', { x1: X(b), x2: X(b), y1: 62, y2: 108, stroke: '#94a3b8', 'stroke-dasharray': '2 3' }); el('text', { x: X(b), y: 58, 'text-anchor': 'middle', 'class': 's' }, 'boundary'); });
+  function hp(i) { return Math.max(Math.exp(-Math.pow(i - B1, 2) / 1.6), Math.exp(-Math.pow(i - B2, 2) / 1.6)); }
+  // right side: quantization and tokens
+  el('text', { x: 700, y: 30, 'class': 'h' }, 'Pool to 2 Hz · nearest of 512 centroids');
+  el('text', { x: 700, y: 48, 'class': 's' }, 'k-means codebook fitted on 600k pooled YAM vectors');
+  el('rect', { x: 700, y: 66, width: 270, height: 232, rx: 10, fill: '#f6f8fc', stroke: '#e2e8f0' });
+  var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  for (var c = 0; c < 70; c++) el('circle', { cx: 712 + rnd() * 246, cy: 78 + rnd() * 208, r: 2.6, 'class': 'cen' });
+  var TOK = [{ k: 438, c: '#1baf7a', x: 760, y: 120 }, { k: 456, c: '#e87ba4', x: 842, y: 98 }, { k: 445, c: '#eda100', x: 918, y: 160 }, { k: 431, c: '#eb6834', x: 880, y: 240 }, { k: 296, c: '#2a78d6', x: 776, y: 232 }];
+  var probe = el('line', { x1: 0, y1: 0, x2: 0, y2: 0, stroke: '#0ea5b5', 'stroke-width': 1.5, 'stroke-dasharray': '4 4', opacity: 0 });
+  TOK.forEach(function (t) {
+    el('circle', { cx: t.x, cy: t.y, r: 5, fill: t.c });
+    t.ring = el('circle', { cx: t.x, cy: t.y, r: 12, stroke: t.c, 'class': 'ring' });
+    el('text', { x: t.x + 9, y: t.y - 8, 'class': 'mono', fill: t.c }, 'k' + t.k);
+  });
+  el('text', { x: 700, y: 336, 'class': 'h' }, 'Sparse Motion Tokens');
+  el('text', { x: 700, y: 354, 'class': 's' }, '2 per second · 512-word motion vocabulary');
+  TOK.forEach(function (t, n) {
+    var g = el('g', { 'class': 'chip' }); t.chip = g;
+    el('rect', { x: 700 + n * 56, y: 368, width: 50, height: 30, rx: 6, fill: t.c }, null, g);
+    el('text', { x: 725 + n * 56, y: 388, 'text-anchor': 'middle', 'class': 'mono', fill: '#fff', 'font-weight': 700 }, 'k' + t.k, g);
+  });
+  el('rect', { x: 1000, y: 66, width: 180, height: 232, rx: 12, fill: '#eef4ff', stroke: '#c7d7f5' });
+  el('text', { x: 1090, y: 150, 'text-anchor': 'middle', 'class': 'h' }, 'Qwen3.5-9B');
+  el('text', { x: 1090, y: 170, 'text-anchor': 'middle', 'class': 'h' }, 'reader');
+  el('text', { x: 1090, y: 200, 'text-anchor': 'middle', 'class': 's' }, 'tokens + instruction');
+  el('text', { x: 1090, y: 218, 'text-anchor': 'middle', 'class': 's' }, '→ timed subtasks');
+  el('text', { x: 1090, y: 236, 'text-anchor': 'middle', 'class': 's' }, 'with descriptions');
+  el('path', { d: 'M 984 383 L 1090 383 L 1090 306', fill: 'none', stroke: '#94a3b8', 'stroke-width': 1.6, 'marker-end': 'url(#arw)' });
+  el('path', { d: 'M ' + (X(N - 1) + 14) + ' ' + LY[4] + ' L 692 ' + LY[4], fill: 'none', stroke: '#94a3b8', 'stroke-width': 1.6, 'marker-end': 'url(#arw)' });
+  var defs = el('defs', {}); var mk = el('marker', { id: 'arw', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto' }, null, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#94a3b8' }, null, mk);
+  // animation: scan output positions; every second output step pools to one token
+  function deps(o) {                                    // nodes in layer l that output o depends on
+    var S = [[], [], [], [], []]; S[4] = [o]; S[3] = [o];
+    for (var l = 2; l >= 0; l--) { var d = DIL[l], set = {}; S[l + 1].forEach(function (i) { [i - d, i, i + d].forEach(function (j) { if (j >= 0 && j < N) set[j] = 1; }); }); S[l] = Object.keys(set).map(Number); }
+    return S;
+  }
+  var START = 3, END = 14, emitAt = { 5: 0, 7: 1, 9: 2, 11: 3, 13: 4 };
+  function show(o) {
+    var S = deps(o), on = S.map(function (a) { var m = {}; a.forEach(function (i) { m[i] = 1; }); return m; });
+    nodes.forEach(function (row, l) { row.forEach(function (c, i) { c.classList.toggle('on', !!on[l][i]); }); });
+    E.forEach(function (e) { e.el.classList.toggle('on', !!(on[e.l + 1][e.i] && on[e.l][e.j])); });
+    var lo = Math.min.apply(null, S[0]), hi = Math.max.apply(null, S[0]);
+    win.setAttribute('x', X(lo) - 9); win.setAttribute('width', X(hi) - X(lo) + 18);
+    var pts = []; for (var i = 0; i <= o; i++) pts.push(X(i) + ',' + (104 - 40 * hp(i)).toFixed(1)); head.setAttribute('points', pts.join(' '));
+    TOK.forEach(function (t) { t.ring.classList.remove('on'); }); probe.setAttribute('opacity', 0);
+    if (o in emitAt) { var t = TOK[emitAt[o]]; t.ring.classList.add('on'); t.chip.classList.add('on');
+      probe.setAttribute('x1', 700); probe.setAttribute('y1', LY[4]); probe.setAttribute('x2', t.x); probe.setAttribute('y2', t.y); probe.setAttribute('opacity', 1); }
+  }
+  function reset() { TOK.forEach(function (t) { t.chip.classList.remove('on'); }); }
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { TOK.forEach(function (t) { t.chip.classList.add('on'); }); show(9); return; }
+  var o = START; reset(); show(o);
+  setInterval(function () { o += 1; if (o > END + 4) { o = START; reset(); } if (o <= END) show(o); }, 520);
 })();
 </script>
 </body>
