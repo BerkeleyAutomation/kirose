@@ -1,5 +1,5 @@
 """Title-section video (1920x1080): what the released KiRoSe models do.
-  1 title  2 the sole input is kinematic state (camera crossed out; zoomed, labelled kinematic channels)
+  1 title: a filmstrip of the episode (one frame per segment) over its KiRoSe timeline  2 the sole input is kinematic state (camera crossed out; zoomed, labelled kinematic channels)
   3 annotation of one AgiBot G1 episode: reference video, the live kinematic input and KiRoSe's timed annotations
   4 accuracy versus cost per demonstration  5 released models.
 All kinematics and annotations shown are real: episode 655509 and its KiRoSe output from static/videos/segments.json.
@@ -16,14 +16,22 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 SITE = Path(__file__).resolve().parent.parent; ROOT = Path.home() / "traj_seg_vlm"; OUT = SITE / "static/media"
 SCRATCH = Path("/tmp/claude-1000/-home-shadeform/8d80cac8-7129-4e38-9d6e-386829a91191/scratchpad")
 FPS, W, H, S, OUTW, OUTH = 15, 1280, 720, 3, 1920, 1080      # layout in 1280x720 units, drawn at 3x, saved at 1080p
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"; BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-MONO = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
-f = lambda p, s: ImageFont.truetype(p, int(s * S))
-BG, INK, DIM, FAINT, RULE = (255, 255, 255), (21, 35, 59), (68, 86, 111), (116, 136, 163), (219, 231, 246)
-ACC, ORG, RED, TEAL, HL, PANEL = (37, 99, 235), (235, 104, 52), (220, 38, 38), (14, 165, 181), (226, 236, 252), (243, 247, 255)
+FD = SITE / "tools/fonts"                                    # Newsreader (headings), Inter (text), IBM Plex Mono (labels)
+FONT, BOLD, SERIF, MONO, MONOM = "inter400", "inter600", "serif", FD / "IBMPlexMono-Regular.ttf", FD / "IBMPlexMono-Medium.ttf"
+_FC = {}
+def f(p, s):
+    k = (p, s)
+    if k not in _FC:
+        if p == SERIF: fo = ImageFont.truetype(str(FD / "Newsreader.ttf"), int(s * S)); fo.set_variation_by_axes([400, 72])
+        elif p in (FONT, BOLD): fo = ImageFont.truetype(str(FD / "Inter.ttf"), int(s * S)); fo.set_variation_by_axes([min(max(s, 14), 32), 400 if p == FONT else 600])
+        else: fo = ImageFont.truetype(str(p), int(s * S))
+        _FC[k] = fo
+    return _FC[k]
+BG, INK, DIM, FAINT, RULE = (248, 248, 247), (24, 24, 27), (82, 82, 88), (132, 132, 138), (224, 224, 222)
+ACC, ORG, RED, TEAL, HL, PANEL = (52, 98, 238), (235, 104, 52), (214, 48, 49), (14, 150, 166), (234, 239, 253), (255, 255, 255)
 FLORA, OPUS, ASTRA = (194, 24, 122), (27, 175, 122), (235, 104, 52)
 WHITE = (255, 255, 255)
-SCENES = [("title", 4.5), ("kinonly", 7.0), ("pipeline", 15.0), ("cost", 7.5), ("models", 6.5)]
+SCENES = [("title", 6.0), ("kinonly", 7.0), ("pipeline", 15.0), ("cost", 7.5), ("models", 6.5)]
 FADE = 0.4
 EP = "655509"
 # six readable channels: linear speed, angular speed and gripper opening rate for each arm
@@ -52,7 +60,7 @@ def paste_round(im, src, x, y, r=12):
 
 
 def pill(d, x, y, s, bg, fg=WHITE, size=13, anchor="l"):
-    fo = f(BOLD, size); w = d.textlength(s, font=fo) / S + 28
+    fo = f(MONOM, size); w = d.textlength(s, font=fo) / S + 28
     if anchor == "m": x -= w / 2
     R(d, x, y, x + w, y + size + 16, r=(size + 16) / 2, fill=bg); T(d, (x + 14, y + 7), s, fo, fg)
 
@@ -90,17 +98,45 @@ def scope(d, D, x, y, w, h, a, b, labels=True, lw=2.4, playhead=None, alpha=1.0)
 
 
 # ---------- scenes ----------
+VERB = {"pick": (52, 98, 238), "place": (235, 104, 52), "move": (14, 150, 166), "adjust": (139, 92, 214), "reset": (150, 150, 155)}
+
+
 def s_title(im, d, t, dur, D):
-    a, b, c = ease(t / 0.8), ease((t - 0.6) / 0.8), ease((t - 1.4) / 0.8)
-    T(d, (W / 2, 210), "KiRoSe", f(BOLD, 100), mix(BG, ACC, a), "ma")
-    T(d, (W / 2, 340), "Towards a Kinematic Foundation Model", f(BOLD, 40), mix(BG, INK, b), "ma")
-    T(d, (W / 2, 420), "Temporal annotation of robot demonstrations from kinematic data alone,", f(FONT, 23), mix(BG, DIM, c), "ma")
-    T(d, (W / 2, 454), "with openly released model weights", f(FONT, 23), mix(BG, DIM, c), "ma")
+    """A filmstrip of the episode above its KiRoSe timeline: one frame per segment, the timeline filling in behind a playhead."""
+    segs, Tep, fr = D["main"]["kirose"], D["main"]["duration"], D["frames"]
+    a = ease(t / 0.7)
+    T(d, (W / 2, 84), "KiRoSe", f(SERIF, 84), mix(BG, INK, a), "ma")
+    T(d, (W / 2, 196), "segments robot demonstrations into timed subtasks", f(MONO, 19), mix(BG, DIM, ease((t - 0.3) / 0.7)), "ma")
+    n, gap, x0, x1 = len(segs), 12, 64, W - 64
+    fw = (x1 - x0 - (n - 1) * gap) / n; fh = fw * 0.75; fy, ty, th = 284, 486, 40
+    X = lambda tt: x0 + (x1 - x0) * tt / Tep
+    sweep = Tep * min(max((t - 1.4) / 3.2, 0), 1)       # constant-speed playhead
+    for k, g in enumerate(segs):
+        verb = g["d"].split()[0].lower(); col = VERB.get(verb, FAINT); fx = x0 + k * (fw + gap)
+        p = ease((t - 0.6 - 0.12 * k) / 0.5)
+        if p > 0:                                       # frame from the middle of the segment
+            img = fit(fr[min(int((g["s"] + g["e"]) / 2 * FPS), len(fr) - 1)], fw, fh)
+            img = Image.blend(Image.new("RGB", img.size, BG), img, p); paste_round(im, img, fx, fy, r=8)
+        q = ease((sweep - g["s"]) / 1.2) if sweep > g["s"] else 0
+        if q > 0:
+            sx0, sx1 = X(g["s"]) + 1.5, X(min(g["e"], max(sweep, g["s"]))) - 1.5
+            if sx1 > sx0: R(d, sx0, ty, sx1, ty + th, r=6, fill=mix(BG, col, 0.85))
+            R(d, fx - 3, fy - 3, fx + fw + 3, fy + fh + 3, r=10, outline=mix(BG, col, q), width=3 * S)
+            cx = (X(g["s"]) + X(g["e"])) / 2
+            line(d, [(fx + fw / 2, fy + fh + 4), (fx + fw / 2, fy + fh + 26), (cx, ty - 24), (cx, ty - 4)], fill=mix(BG, col, 0.6 * q), width=2 * S, joint="curve")
+            T(d, (cx, ty + th + 12), verb, f(MONOM, 14), mix(BG, col, q), "ma")
+    R(d, x0, ty, x1, ty + th, r=6, outline=RULE, width=S)
+    if 0 < sweep < Tep:
+        px = X(sweep); line(d, [(px, ty - 10), (px, ty + th + 6)], fill=INK, width=2 * S)
+    for tt in range(0, int(Tep) + 1, 10):
+        T(d, (X(tt), ty + th + 44), f"{tt} s", f(MONO, 13), mix(BG, FAINT, a), "ma")
+    c = ease((t - 4.6) / 0.6)
+    if c > 0: T(d, (W / 2, 636), "AgiBot G1 · Toast bread · kinematic input only", f(MONO, 15), mix(BG, FAINT, c), "ma")
 
 
 def s_kinonly(im, d, t, dur, D):
     a = ease(t / 0.6); Tep = D["main"]["duration"]
-    T(d, (W / 2, 36), "The sole model input is the robot's kinematic state", f(BOLD, 34), mix(BG, INK, a), "ma")
+    T(d, (W / 2, 36), "The sole model input is the robot's kinematic state", f(SERIF, 34), mix(BG, INK, a), "ma")
     T(d, (W / 2, 88), "No camera images are used. KiRoSe reads end-effector velocities and gripper motion recorded by the robot.",
       f(FONT, 17), mix(BG, DIM, a), "ma")
     # left: camera, crossed out
@@ -132,13 +168,13 @@ def s_kinonly(im, d, t, dur, D):
 def s_pipeline(im, d, t, dur, D):
     r = D["main"]; Tep = r["duration"]
     play = min(max((t - 0.8) / (dur - 2.0), 0), 1) * Tep
-    T(d, (W / 2, 30), "Annotating a robot demonstration from kinematic state", f(BOLD, 30), INK, "ma")
+    T(d, (W / 2, 30), "Annotating a robot demonstration from kinematic state", f(SERIF, 30), INK, "ma")
     T(d, (W / 2, 76), f'AgiBot G1, task "{r["instruction"]}", a robot not seen in training', f(FONT, 16), DIM, "ma")
     vx, vy, vw, vh = 48, 116, 560, 315
     fr = D["frames"]; img = fit(fr[min(int(play * FPS), len(fr) - 1)], vw, vh)
     paste_round(im, img, vx, vy, r=14)
-    pill(d, vx + 12, vy + 12, f"{mmss(play)} / {mmss(Tep)}", (11, 18, 32), size=12)
-    pill(d, vx + 12, vy + vh - 40, "Video shown for reference only; not a model input", (11, 18, 32), size=12)
+    pill(d, vx + 12, vy + 12, f"{mmss(play)} / {mmss(Tep)}", (250, 250, 250), INK, size=12)
+    pill(d, vx + 12, vy + vh - 40, "Video shown for reference only; not a model input", (250, 250, 250), INK, size=12)
     # the model input: a scrolling, magnified window of the kinematic channels
     iy = vy + vh + 14; ih = 720 - 28 - iy
     R(d, vx, iy, vx + vw, iy + ih, r=14, fill=PANEL, outline=ACC, width=3 * S)
@@ -160,7 +196,7 @@ def s_pipeline(im, d, t, dur, D):
 
 def s_cost(im, d, t, dur, D):
     a = ease(t / 0.6)
-    T(d, (W / 2, 30), "Accuracy versus cost per demonstration", f(BOLD, 32), mix(BG, INK, a), "ma")
+    T(d, (W / 2, 30), "Accuracy versus cost per demonstration", f(SERIF, 32), mix(BG, INK, a), "ma")
     T(d, (W / 2, 80), "Boundary F1 within ±1 s on 50 held-out YAM and 20 AgiBot G1 episodes; cost per demonstration on a logarithmic scale",
       f(FONT, 16), mix(BG, DIM, a), "ma")
     L, Rr, Tp, B = 190, 1150, 150, 590; lo, hi, ylo, yhi = np.log10(6e-5), np.log10(3), 0.45, 0.82
@@ -203,7 +239,7 @@ def s_cost(im, d, t, dur, D):
 
 def s_models(im, d, t, dur, D):
     a = ease(t / 0.8)
-    T(d, (W / 2, 110), "Released models", f(BOLD, 38), mix(BG, INK, a), "ma")
+    T(d, (W / 2, 110), "Released models", f(SERIF, 38), mix(BG, INK, a), "ma")
     T(d, (W / 2, 168), "Model weights and loading code are available on Hugging Face.", f(FONT, 20), mix(BG, DIM, a), "ma")
     cards = [("KiRoSe-SMT", "Sparse Motion Token encoder", "2.8M parameters"), ("KiRoSe-Reader", "Annotation model", "9B parameters"),
              ("KiRoSe-Progress", "Progress estimation head", "68k parameters")]
@@ -214,7 +250,7 @@ def s_models(im, d, t, dur, D):
         T(d, (x + cw / 2, 254), n, f(BOLD, 25), mix(BG, ACC, al), "ma"); T(d, (x + cw / 2, 296), s, f(FONT, 18), mix(BG, INK, al), "ma")
         T(d, (x + cw / 2, 326), p, f(MONO, 14), mix(BG, FAINT, al), "ma")
     c = ease((t - 2.2) / 0.8)
-    T(d, (W / 2, 470), "KiRoSe: Towards a Kinematic Foundation Model", f(BOLD, 26), mix(BG, INK, c), "ma")
+    T(d, (W / 2, 470), "KiRoSe: Towards a Kinematic Foundation Model", f(SERIF, 26), mix(BG, INK, c), "ma")
     T(d, (W / 2, 516), "berkeleyautomation.github.io/kirose", f(MONO, 19), mix(BG, DIM, c), "ma")
 
 
@@ -232,7 +268,7 @@ def main():
         for name, dur in SCENES:
             for i in range(int(dur * FPS)):
                 im = render(name, i / FPS, dur, D); im.save(f"{tmp}/{n:05d}.png"); n += 1
-                if name == "pipeline" and i == int(9 * FPS): im.save(OUT / "hero_poster.jpg", quality=90)
+                if name == "title" and i == int(5.5 * FPS): im.save(OUT / "hero_poster.jpg", quality=90)
         src = ["-framerate", str(FPS), "-i", f"{tmp}/%05d.png"]
         subprocess.run(["ffmpeg", "-v", "error", "-y", *src, "-c:v", "libx264", "-crf", "18", "-preset", "slow", "-tune", "animation",
                         "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(OUT / "hero.mp4")], check=True)
