@@ -256,7 +256,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .teaser-grid.three{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);text-align:left}
 @media (max-width:1100px){.teaser-grid.three{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.teaser-grid.three .live-card{grid-column:1/-1}}
 @media (max-width:720px){.teaser-grid.three{grid-template-columns:minmax(0,1fr)}}
-.card-title{font-weight:700;font-size:.95rem;margin:2px 4px 10px;color:var(--text)}
+.card-title{font-weight:800;font-size:clamp(1.1rem,1.6vw,1.35rem);letter-spacing:-.01em;margin:4px 6px 12px;color:var(--text)}
 .prog-stage{aspect-ratio:4/3}
 .prog-stage video{width:100%;height:100%;object-fit:cover;display:block}
 .live-chip.rev{background:rgba(235,104,52,.92)}
@@ -273,7 +273,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 @media (max-width:720px){.hero h1.kfm-title{white-space:normal}}
 .teaser-grid.two{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);text-align:left}
 @media (max-width:900px){.teaser-grid.two{grid-template-columns:minmax(0,1fr)}}
-.teaser-grid.two .live-stage{aspect-ratio:16/9}
+.teaser-grid.two .live-stage{flex:1 1 auto;aspect-ratio:auto;min-height:300px}
+@media (max-width:900px){.teaser-grid.two .live-stage{flex:none;aspect-ratio:16/9;min-height:0}}
 .lane-row[hidden]{display:none}
 .prog-row svg{width:100%;height:40px;display:block;background:var(--bg-elev);border-radius:4px}
 .prog-row .pz{stroke:var(--text-faint);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
@@ -312,7 +313,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <h1 class="kfm-title"><span class="grad">KiRoSe</span> <span class="kfm-dash">—</span> Towards Kinematic Foundation Model</h1>
     <div class="teaser-grid two">
       <div class="live-card">
-        <div class="card-title">Segmentation and progress from kinematics alone</div>
+        <div class="card-title">Segmentation from kinematics alone</div>
         <div class="live-stage">
           <video id="liveVid" muted playsinline preload="auto"></video>
           <span class="live-chip" id="liveChip">AgiBot G1</span>
@@ -321,7 +322,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <div class="live-lanes" id="liveLanes" aria-hidden="true">
           <div class="lane-row"><span id="laneGtName">Annotation</span><div class="lane" id="laneGt"></div></div>
           <div class="lane-row"><span class="kr" id="laneKrName">KiRoSe</span><div class="lane" id="laneKr"></div></div>
-          <div class="lane-row prog-row"><span class="kr">Progress</span><svg id="liveProg" viewBox="0 0 600 70" preserveAspectRatio="none"></svg></div>
           <div class="live-head" id="liveHead"></div>
         </div>
         <div class="live-meta"><span id="liveTask">&nbsp;</span><span id="liveDots" class="live-dots"></span></div>
@@ -332,7 +332,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <div class="cost-legend"><span><i class="dot-f"></i>YAM, 50 held-out episodes</span><span><i class="dot-o"></i>AgiBot G1, 20 episodes (zero-shot for KiRoSe)</span></div>
       </div>
     </div>
-    <p class="caption caption-wide"><strong>One kinematic tokenizer: segmentation, descriptions and progress.</strong> Left: KiRoSe on held-out YAM and zero-shot AgiBot G1 episodes. It reads only end-effector motion (the video is for reference) and writes the subtasks; a 68k-parameter head on the same tokenizer tracks progress within each predicted subtask. One clip in the rotation plays an AgiBot subtask as recorded and then in reverse: progress rises, then falls (86% of 2,586 reversed AgiBot subtasks get falling progress, against 46% for Robometer-4B). Progress is scaled per clip. Right: boundary F1 within ±1&nbsp;s against cost per trajectory on the same 50 YAM and 20 AgiBot episodes. KiRoSe runs on one H200 at $3.50 per GPU-hour. Flora is NVIDIA's open video segmenter: its YAM point uses all three camera views, and its cost is Flora's own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to $3.50 per GPU-hour. GPT-6 Astra and Claude Opus 5.5 are priced at their API rates. KiRoSe is about 50× cheaper than Flora and 2,000–6,500× cheaper than the API models.</p>
+    <p class="caption caption-wide"><strong>Segmentation from kinematics, at a fraction of the cost.</strong> Left: KiRoSe on held-out YAM, zero-shot AgiBot G1 and zero-shot human-hand episodes. It reads only end-effector motion (the video is for reference) and writes timed subtasks with action descriptions. Right: boundary F1 within ±1&nbsp;s against cost per trajectory on the same 50 YAM and 20 AgiBot episodes. KiRoSe runs on one H200 at $3.50 per GPU-hour. Flora is NVIDIA&rsquo;s open video segmenter: its YAM point uses all three camera views, and its cost is Flora&rsquo;s own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to $3.50 per GPU-hour. GPT-6 Astra and Claude Opus 5.5 are priced at their API rates.</p>
   </div>
 </header>
 
@@ -780,24 +780,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (id) { return document.getElementById(id); };
   var vid = $('liveVid'), desc = $('liveDesc'), who = $('liveWho'), chip = $('liveChip'), laneGt = $('laneGt'), laneKr = $('laneKr');
-  var head = $('liveHead'), task = $('liveTask'), dots = $('liveDots'), prog = $('liveProg');
-  var NS = 'http://www.w3.org/2000/svg', list = [], k = 0, cur = null, started = 0, MAXWALL = 16000;
+  var head = $('liveHead'), task = $('liveTask'), dots = $('liveDots');
+  var list = [], k = 0, cur = null, started = 0, MAXWALL = 16000;
   function lane(el, segs, T, cls) {
     el.innerHTML = '';
     segs.forEach(function (g, i) { var e = document.createElement('i'); e.style.left = (100 * g.s / T) + '%'; e.style.width = (100 * (g.e - g.s) / T) + '%'; if (cls) e.className = cls[i]; el.appendChild(e); });
-  }
-  function progSetup() {
-    prog.innerHTML = '';
-    var z = document.createElementNS(NS, 'line'); z.setAttribute('x1', 0); z.setAttribute('x2', 600); z.setAttribute('y1', 35); z.setAttribute('y2', 35); z.setAttribute('class', 'pz'); prog.appendChild(z);
-    var pl = document.createElementNS(NS, 'path'); pl.setAttribute('class', 'pl'); prog.appendChild(pl); return pl;
-  }
-  var pline = null;
-  function progDraw(t) {
-    var P = cur.progress; if (!P) { pline.setAttribute('d', ''); return; }
-    var dd = '';                                                                  // a new subpath at every subtask start (progress restarts at 0)
-    for (var i = 0; i < P.t.length && P.t[i] <= t + 1e-6; i++)
-      dd += (i === 0 || P.p[i] === 0 ? 'M' : 'L') + (600 * P.t[i] / cur.duration).toFixed(1) + ',' + (35 - 31 * P.p[i] / P.scale).toFixed(1);
-    pline.setAttribute('d', dd);
   }
   function load(n) {
     k = (n + list.length) % list.length; cur = null; var next = list[k];
@@ -814,7 +801,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         lane(laneGt, cur.gt, cur.duration); lane(laneKr, cur.kirose, cur.duration);
         task.textContent = (cur.instruction || cur.task) + ' · boundary F1 ±1 s: ' + cur.f1.kirose.toFixed(2);
       }
-      pline = progSetup(); head.style.left = laneGt.offsetLeft + 'px';
+      head.style.left = laneGt.offsetLeft + 'px';
       Array.prototype.forEach.call(dots.children, function (b, i) { b.className = i === k ? 'on' : ''; });
     }, reduce ? 0 : 300);
   }
@@ -826,7 +813,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     if (!cur) return;
     var t = vid.currentTime, T = cur.duration, w = laneGt.getBoundingClientRect().width;
     head.style.left = (laneGt.offsetLeft + w * Math.min(1, t / T)) + 'px';
-    progDraw(t);
     if (cur.kind === 'reverse') {
       var back = t >= cur.half;
       who.textContent = 'Progress'; desc.textContent = back ? 'Same subtask played in reverse: progress falls' : 'As recorded: progress rises';
@@ -840,19 +826,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   });
   vid.addEventListener('ended', function () { if (!reduce) load(k + 1); });
   vid.addEventListener('error', function () { if (!reduce) setTimeout(function () { load(k + 1); }, 1500); });
-  function scaled(P) { var m = 0; P.p.forEach(function (v) { m = Math.max(m, Math.abs(v)); }); P.scale = m || 1; return P; }
-  Promise.all([fetch('static/videos/segments.json').then(function (r) { return r.json(); }),
-               fetch('static/videos/progress_traces.json').then(function (r) { return r.json(); }),
-               fetch('static/media/progress_demo.json').then(function (r) { return r.json(); })]).then(function (res) {
-    var d = res[0], tr = res[1], demo = res[2];
-    var byG = d.groups.filter(function (g) { return g.key !== 'human'; }).map(function (g) {
-      return g.runs.filter(function (r) { return r.duration <= 70 && tr[r.id]; }).map(function (r) { return Object.assign({ label: g.label, progress: scaled(tr[r.id]) }, r); });
+  fetch('static/videos/segments.json').then(function (r) { return r.json(); }).then(function (d) {
+    var byG = d.groups.map(function (g) {
+      return g.runs.filter(function (r) { return r.duration <= 70; }).map(function (r) { return Object.assign({ label: g.label }, r); });
     });
-    var D = demo.duration, rev = { kind: 'reverse', label: 'AgiBot G1 · as recorded', video: 'static/media/progress_demo.mp4', duration: 2 * D, half: D,
-      subtask: 'insert the toast', spans: [{ s: 0, e: D }, { s: D, e: 2 * D }],
-      progress: scaled({ t: [0].concat(demo.t, [D], demo.t.map(function (x) { return x + D; })), p: [0].concat(demo.forward, [0], demo.reversed) }) };
-    for (var i = 0; i < 4; i++) byG.forEach(function (g) { if (g[i]) list.push(g[i]); });
-    list.splice(1, 0, rev); list.splice(6, 0, rev);
+    for (var i = 0; i < 3; i++) byG.forEach(function (g) { if (g[i]) list.push(g[i]); });
     list.forEach(function () { dots.appendChild(document.createElement('b')); });
     load(0);
   });
@@ -887,7 +865,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   var kc = 0.16 / 3600 * 3.5;
   var P = [
     { n: 'KiRoSe', c: kc, yam: 0.666, agi: 0.772, col: '#2563eb', lx: 12, ly: 0.719, a: 'start' },
-    { n: 'Flora', c: 0.00766, yam: 0.583, agi: 0.774, col: '#6250d6', lx: 12, ly: 0.774, a: 'start' },
+    { n: 'Flora', c: 0.00766, yam: 0.583, agi: 0.774, col: '#c2187a', lx: 12, ly: 0.774, a: 'start' },
     { n: 'Claude Opus 5.5', c: 0.33, yam: 0.495, agi: 0.669, col: '#1baf7a', lx: -11, ly: 0.669, a: 'end' },
     { n: 'GPT-6 Astra', c: 1.01, yam: 0.601, agi: 0.544, col: '#eb6834', lx: -11, ly: 0.601, a: 'end' }
   ];
@@ -898,7 +876,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     b.appendChild(document.createElementNS(NS, 'title')).textContent = p.n + ' · AgiBot (20): ' + p.agi.toFixed(3);
     el('text', { x: X(p.c) + p.lx, y: Y(p.ly) + 4, 'text-anchor': p.a, 'class': 'lab', fill: p.col }, p.n);
   });
-  bracket(kc, 0.00766, T - 14 + 18, '≈50× cheaper than Flora', '#6250d6');
+  bracket(kc, 0.00766, T - 14 + 18, '≈50× cheaper than Flora', '#c2187a');
   bracket(kc, 0.33, B - 12, '≈2,000–6,500× cheaper than API models', 'var(--text-dim)');
 })();
 </script>
