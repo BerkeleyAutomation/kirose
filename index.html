@@ -347,6 +347,12 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 .data-video video{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:16/9;border-radius:14px;border:1px solid var(--border);background:var(--bg)}
 .intro-video{margin:0 auto;max-width:1120px}
 .intro-video video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:16px;border:1px solid var(--border);background:var(--bg)}
+.hero.paper{padding-block:64px 56px;text-align:center}
+.hero.paper h1.paper-title{font-size:clamp(1.6rem,3.4vw,2.6rem);max-width:980px;margin:0 auto 18px;background:none;color:var(--text);-webkit-text-fill-color:var(--text)}
+.hero.paper h1.paper-title .grad{background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero.paper .hero-logos{margin-bottom:22px}
+.hero.paper .btn-row{margin-bottom:40px}
+.abstract-text{font-size:1.05rem;line-height:1.8;color:var(--text-dim);text-align:left;margin:0}
 </style>
 </head>
 <body>
@@ -354,7 +360,7 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 <nav class="sidenav" aria-label="Section navigation">
   <ul>
     <li><a href="#top"><span class="dot"></span><span class="lbl">Overview</span></a></li>
-    <li><a href="#abstract"><span class="dot"></span><span class="lbl">TL;DR</span></a></li>
+    <li><a href="#abstract"><span class="dot"></span><span class="lbl">Abstract</span></a></li>
     <li><a href="#models"><span class="dot"></span><span class="lbl">Models</span></a></li>
     <li><a href="#smt"><span class="dot"></span><span class="lbl">Motion Tokens</span></a></li>
     <li><a href="#capabilities"><span class="dot"></span><span class="lbl">Capabilities</span></a></li>
@@ -371,13 +377,23 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 
 <nav class="topbar" aria-label="Site">
   <a class="tb-brand" href="#top">KiRoSe</a>
-  <div class="tb-links"><a href="#top">Home</a><a href="#paper">Paper</a><a href="#videos">Videos</a><a href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer">Models</a><a href="#bibtex">BibTeX</a></div>
+  <div class="tb-links"><a href="#top">Home</a><a href="#abstract">Abstract</a><a href="#videos">Videos</a><a href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer">Models</a><a href="#bibtex">BibTeX</a></div>
   <span class="tb-team">UC Berkeley · Toyota Research Institute</span>
 </nav>
 
-<header class="hero kfm" id="top">
+<header class="hero paper" id="top">
   <div class="container wide">
-    <h1 class="kfm-title"><span class="grad">KiRoSe</span> <span class="kfm-dash">—</span> Towards Kinematic Foundation Model</h1>
+    <h1 class="paper-title"><span class="grad">KiRoSe:</span> Using Kinematic Data for Efficient Segmentation of Robot Demonstrations</h1>
+    <div class="authors">
+      <span><a href="https://ehehee.github.io/" target="_blank" rel="noreferrer">Shuangyu Xie</a><sup>1</sup>, </span>
+      <span><a href="https://keplerc.github.io/" target="_blank" rel="noreferrer">Kaiyuan Chen</a><sup>1</sup>, </span>
+      <span>Muhammad Zubair Irshad<sup>2</sup>, </span>
+      <span>Richard Cheng<sup>2</sup>, </span>
+      <span>Sergey Zakharov<sup>2</sup>, </span>
+      <span><a href="https://goldberg.berkeley.edu/" target="_blank" rel="noreferrer">Ken Goldberg</a><sup>1</sup></span>
+    </div>
+    <div class="affiliations"><span><sup>1</sup>University of California, Berkeley</span> &nbsp; <span><sup>2</sup>Toyota Research Institute</span></div>
+    <div class="hero-logos"><img src="static/images/logos/berkeley.png" alt="University of California, Berkeley"><img src="static/images/logos/tri.png" alt="Toyota Research Institute"></div>
     <div class="btn-row kfm-btns">
       <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
       <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
@@ -392,32 +408,15 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   </div>
 </header>
 
-<section class="paper-head" id="paper">
-  <div class="container">
-    <h2 class="paper-title"><span class="grad">KiRoSe:</span> Using Kinematic Data for Efficient Segmentation of Robot Demonstrations</h2>
-    <div class="authors">
-      <span><a href="https://ehehee.github.io/" target="_blank" rel="noreferrer">Shuangyu Xie</a><sup>1</sup>, </span>
-      <span><a href="https://keplerc.github.io/" target="_blank" rel="noreferrer">Kaiyuan Chen</a><sup>1</sup>, </span>
-      <span>Muhammad Zubair Irshad<sup>2</sup>, </span>
-      <span>Richard Cheng<sup>2</sup>, </span>
-      <span>Sergey Zakharov<sup>2</sup>, </span>
-      <span><a href="https://goldberg.berkeley.edu/" target="_blank" rel="noreferrer">Ken Goldberg</a><sup>1</sup></span>
-    </div>
-    <div class="affiliations"><span><sup>1</sup>University of California, Berkeley</span> &nbsp; <span><sup>2</sup>Toyota Research Institute</span></div>
-    <div class="hero-logos"><img src="static/images/logos/berkeley.png" alt="University of California, Berkeley"><img src="static/images/logos/tri.png" alt="Toyota Research Institute"></div>
-  </div>
-</section>
+
 
 
 
 
 <section class="tight" id="abstract">
   <div class="container">
-    <div class="tldr-box">
-      <h2 class="tldr-title">TL;DR</h2>
-      <p class="tldr-text"><span class="hl">KiRoSe</span> reads a robot's own <span class="hl">end-effector kinematics</span>, compressed into <span class="hl">2 Sparse Motion Tokens per second</span>, and writes subtask boundaries and action descriptions with an open 9B language model. Trained on one robot (YAM), it transfers <span class="hl">zero-shot to AgiBot G1 and human hands</span>, beats frontier video models at locating boundaries on robot data, and costs <span class="hl">thousands of times less</span> per demonstration. The same tokenizer also tracks task progress and notices when an action is undone.</p>
-      <details class="abs-more"><summary>Read the abstract</summary><p>Segmenting robot demonstration data into disjoint temporal and semantic subsegments is valuable for learning, cleaning, retrieval, and analysis. Segmentation is often performed manually in a tedious and error-prone process. Multimodal Large Language Models (MLLMs) have the potential to automate this process, but directly ingesting raw multi-camera video streams into MLLMs can be costly and can quickly exhaust context windows. We introduce <strong>KiRoSe</strong> (<strong>Ki</strong>nematics for <strong>Ro</strong>bot <strong>Se</strong>gmentation), a framework that focuses on the companion stream of robot kinematic data. Inspired by classical entropy coding such as Huffman coding, where frequent symbols get compact codes, we propose <strong>Sparse Motion Tokens (SMTs)</strong>, a discrete kinematic vocabulary that compactly represents recurring, temporally localized motion patterns, which we call <em>kinematic events</em>. SMTs are learned by encoding kinematic trajectories with temporal-segment supervision and quantizing the resulting features. We use increasingly available robot demonstration subtask annotations to supervise an open language model to interpret the resulting token sequences. Evaluation against human-labeled segmentation shows that KiRoSe substantially outperforms baseline segmentation methods in F1 quality and transfers zero-shot to unseen robot embodiments and egocentric human motion, while preserving the language model's open-vocabulary knowledge. Beyond segmentation, the same frozen representation supports progress estimation: a small head trained only on YAM tracks task progress zero-shot on an unseen robot and detects when an action is being undone.</p></details>
-    </div>
+    <h2 class="section-title">Abstract</h2>
+    <p class="abstract-text">Segmenting robot demonstration data into disjoint temporal and semantic subsegments is valuable for learning, cleaning, retrieval, and analysis. Segmentation is often performed manually in a tedious and error-prone process. Multimodal Large Language Models (MLLMs) have the potential to automate this process, but directly ingesting raw multi-camera video streams into MLLMs can be costly and can quickly exhaust context windows. We introduce <strong>KiRoSe</strong> (<strong>Ki</strong>nematics for <strong>Ro</strong>bot <strong>Se</strong>gmentation), a framework that focuses on the companion stream of robot kinematic data. Inspired by classical entropy coding such as Huffman coding, where frequent symbols get compact codes, we propose <strong>Sparse Motion Tokens (SMTs)</strong>, a discrete kinematic vocabulary that compactly represents recurring, temporally localized motion patterns, which we call <em>kinematic events</em>. SMTs are learned by encoding kinematic trajectories with temporal-segment supervision and quantizing the resulting features. We use increasingly available robot demonstration subtask annotations to supervise an open language model to interpret the resulting token sequences. Evaluation against human-labeled segmentation shows that KiRoSe substantially outperforms baseline segmentation methods in F1 quality and transfers zero-shot to unseen robot embodiments and egocentric human motion, while preserving the language model's open-vocabulary knowledge. Beyond segmentation, the same frozen representation supports progress estimation: a small head trained only on YAM tracks task progress zero-shot on an unseen robot and detects when an action is being undone.</p>
   </div>
 </section>
 
