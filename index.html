@@ -353,6 +353,15 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 .hero.paper .hero-logos{margin-bottom:22px}
 .hero.paper .btn-row{margin-bottom:40px}
 .abstract-text{font-size:1.05rem;line-height:1.8;color:var(--text-dim);text-align:left;margin:0}
+/* first screen: title block + video always fit the viewport */
+.hero.paper{padding-block:clamp(16px,3.2vh,40px) clamp(16px,3vh,36px)}
+.hero.paper h1.paper-title{font-size:clamp(1.4rem,min(3vw,4.4vh),2.5rem);margin-bottom:clamp(6px,1.4vh,14px)}
+.hero.paper .authors{margin:2px auto;font-size:clamp(.92rem,2vh,1.06rem)}
+.hero.paper .affiliations{margin:2px auto}
+.hero.paper .hero-logos{margin:clamp(6px,1.4vh,14px) 0;gap:28px}
+.hero.paper .hero-logos img{height:clamp(26px,4.2vh,40px)}
+.hero.paper .btn-row{margin:0 0 clamp(12px,2.4vh,24px)}
+.intro-video{width:min(100%,1280px,calc((100svh - var(--intro-top,420px) - 20px) * 16 / 9));min-width:min(100%,560px)}
 </style>
 </head>
 <body>
@@ -401,7 +410,7 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
       <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
     </div>
     <figure class="intro-video">
-      <video id="heroVid" autoplay muted loop playsinline preload="auto" poster="static/media/hero_poster.jpg" aria-label="KiRoSe annotates robot data with kinematic state only: it never sees the video, and writes timed annotations; the models are on Hugging Face">
+      <video id="heroVid" autoplay muted loop playsinline preload="auto" poster="static/media/hero_poster.jpg" aria-label="Overview video: KiRoSe annotates robot demonstrations from kinematic state alone, without camera input; accuracy versus cost per demonstration; released models on Hugging Face">
         <source src="static/media/hero.webm" type="video/webm"><source src="static/media/hero.mp4" type="video/mp4">
       </video>
     </figure>
@@ -1038,6 +1047,15 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
   var play = function () { var p = v.play(); if (p && p.catch) p.catch(function () {}); };
   if (!('IntersectionObserver' in window)) { play(); return; }
   new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) play(); else v.pause(); }); }, { threshold: 0.25 }).observe(v);
+})();
+</script>
+<script>
+/* Size the intro video so the title block and the whole video fit in the first screen. */
+(function () {
+  var fig = document.querySelector('.intro-video'); if (!fig) return;
+  function fit() { document.documentElement.style.setProperty('--intro-top', (fig.getBoundingClientRect().top + window.scrollY) + 'px'); }
+  fit(); window.addEventListener('resize', fit); window.addEventListener('load', fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 })();
 </script>
 </body>
