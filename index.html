@@ -345,6 +345,8 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 .model-chips b{font-size:.86rem}.model-chips span{font-size:.74rem;color:var(--text-faint)}
 .data-video{margin:clamp(40px,5vw,64px) 0 0;text-align:left}
 .data-video video{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:16/9;border-radius:14px;border:1px solid var(--border);background:var(--bg)}
+.intro-video{margin:0 auto;max-width:1120px}
+.intro-video video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:16px;border:1px solid var(--border);background:var(--bg)}
 </style>
 </head>
 <body>
@@ -353,6 +355,7 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   <ul>
     <li><a href="#top"><span class="dot"></span><span class="lbl">Overview</span></a></li>
     <li><a href="#abstract"><span class="dot"></span><span class="lbl">TL;DR</span></a></li>
+    <li><a href="#models"><span class="dot"></span><span class="lbl">Models</span></a></li>
     <li><a href="#smt"><span class="dot"></span><span class="lbl">Motion Tokens</span></a></li>
     <li><a href="#capabilities"><span class="dot"></span><span class="lbl">Capabilities</span></a></li>
     <li><a href="#videos"><span class="dot"></span><span class="lbl">Videos</span></a></li>
@@ -381,67 +384,11 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
       <a class="btn" href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
       <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
     </div>
-    <p class="kfm-sub">An open model you can download and run. Give it a robot&rsquo;s end-effector motion and it describes every event in the demonstration, with start and end times.</p>
-    <div class="teaser-grid two">
-      <div class="live-card">
-        <div class="card-title">Robot motion in, timed events out</div>
-        <div class="live-stage">
-          <video id="liveVid" muted playsinline preload="auto"></video>
-          <span class="live-chip" id="liveChip">AgiBot G1</span>
-          <div class="live-cap"><span class="live-who" id="liveWho">KiRoSe</span><span id="liveDesc">&nbsp;</span></div>
-        </div>
-        <div class="live-lanes" id="liveLanes" aria-hidden="true">
-          <div class="lane-row"><span id="laneGtName">Annotation</span><div class="lane" id="laneGt"></div></div>
-          <div class="lane-row"><span class="kr" id="laneKrName">KiRoSe</span><div class="lane" id="laneKr"></div></div>
-          <div class="live-head" id="liveHead"></div>
-        </div>
-        <div class="live-meta"><span id="liveTask">&nbsp;</span><span id="liveDots" class="live-dots"></span></div>
-      </div>
-      <div class="events-card">
-        <div class="card-title">KiRoSe output</div>
-        <div class="ev-head"><span class="ev-k">instruction</span><span id="evInstr">&nbsp;</span></div>
-        <ol class="ev-list" id="evList" aria-live="off"></ol>
-        <div class="ev-foot">Read from kinematics only: 2 motion tokens per second, no camera input. The video is shown for reference.</div>
-      </div>
-    </div>
-
-    <div class="teaser-grid two use-row">
-      <div class="code-card">
-        <div class="card-title">Download and run</div>
-        <pre class="code"><code><span class="c-k">from</span> transformers <span class="c-k">import</span> AutoModel
-<span class="c-k">from</span> vllm <span class="c-k">import</span> LLM, SamplingParams
-
-smt = AutoModel.from_pretrained(<span class="c-s">"sy-xie/KiRoSe-SMT"</span>, trust_remote_code=<span class="c-k">True</span>)
-enc = smt.encode(kin, t)   <span class="c-c"># (T, 14) end-effector rates at ~30 Hz, t in seconds</span>
-
-reader = LLM(<span class="c-s">"sy-xie/KiRoSe-Reader"</span>, dtype=<span class="c-s">"bfloat16"</span>, max_model_len=<span class="c-n">8192</span>,
-             limit_mm_per_prompt={<span class="c-s">"image"</span>: <span class="c-n">0</span>, <span class="c-s">"video"</span>: <span class="c-n">0</span>})
-params = SamplingParams(temperature=<span class="c-n">0</span>, max_tokens=<span class="c-n">4096</span>, logit_bias=smt.motion_logit_bias())
-out = reader.generate([smt.reader_prompt(enc, <span class="c-s">"Toast bread"</span>)], params)
-
-events = smt.parse_segments(out[<span class="c-n">0</span>].outputs[<span class="c-n">0</span>].text, duration=enc.duration)
-<span class="c-c"># [{"start": 0.1, "end": 7.4, "description": "Pick up the bread ..."}, ...]</span>
-progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span class="c-n">13.6</span>)   <span class="c-c"># dense progress for one event</span></code></pre>
-        <div class="model-chips">
-          <a href="https://huggingface.co/sy-xie/KiRoSe-SMT" target="_blank" rel="noreferrer"><b>KiRoSe-SMT</b><span>motion tokenizer · 2.8M</span></a>
-          <a href="https://huggingface.co/sy-xie/KiRoSe-Reader" target="_blank" rel="noreferrer"><b>KiRoSe-Reader</b><span>event writer · 9B</span></a>
-          <a href="https://huggingface.co/sy-xie/KiRoSe-Progress" target="_blank" rel="noreferrer"><b>KiRoSe-Progress</b><span>progress head · 68k</span></a>
-        </div>
-      </div>
-      <div class="cost-card">
-        <div class="card-title">Accuracy vs. cost per demonstration</div>
-        <svg id="costPlot" viewBox="0 0 380 430" role="img" aria-label="Boundary F1 within one second versus cost per trajectory on a log scale, on 50 held-out YAM and 20 AgiBot episodes. KiRoSe: 0.67 and 0.77 at about 0.0002 dollars per trajectory. Flora: 0.58 and 0.77 at about 0.008 dollars. Claude Opus 5.5: 0.50 and 0.67 at 0.33 dollars. GPT-6 Astra: 0.60 and 0.54 at 1.01 dollars."></svg>
-        <div class="cost-legend"><span><i class="dot-f"></i>YAM, 50 held-out episodes</span><span><i class="dot-o"></i>AgiBot G1, 20 episodes (zero-shot for KiRoSe)</span></div>
-      </div>
-    </div>
-
-    <figure class="data-video">
-      <video id="dataVid" muted loop playsinline preload="metadata" poster="static/media/train_data_poster.png" aria-label="Animated summary of the YAM training data: 5,478 episodes, 264 hours, 140 tasks, 145,524 timed events and 83 verbs">
-        <source src="static/media/train_data.webm" type="video/webm"><source src="static/media/train_data.mp4" type="video/mp4">
+    <figure class="intro-video">
+      <video id="heroVid" autoplay muted loop playsinline preload="auto" poster="static/media/hero_poster.jpg" aria-label="KiRoSe in 25 seconds: given a robot's motion, the open model writes what happened and when; the models are on Hugging Face">
+        <source src="static/media/hero.webm" type="video/webm"><source src="static/media/hero.mp4" type="video/mp4">
       </video>
     </figure>
-
-    <p class="caption caption-wide"><strong>A downloadable model that annotates robot data.</strong> Top: KiRoSe on held-out YAM, zero-shot AgiBot G1 and zero-shot human-hand episodes. It reads only end-effector motion and writes each event with its start and end time; the list on the right is its actual output for the playing episode. Middle: the three released models and the code to run them; accuracy is boundary F1 within ±1&nbsp;s against cost per trajectory on 50 YAM and 20 AgiBot episodes, with KiRoSe on one H200 at $3.50 per GPU-hour, Flora&rsquo;s own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to the same rate, and GPT-6 Astra and Claude Opus 5.5 at API prices. Bottom: the training data, 264 hours of one bimanual robot (YAM, ABC-130K) with every subtask annotated in time.</p>
   </div>
 </header>
 
@@ -471,6 +418,44 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
       <p class="tldr-text"><span class="hl">KiRoSe</span> reads a robot's own <span class="hl">end-effector kinematics</span>, compressed into <span class="hl">2 Sparse Motion Tokens per second</span>, and writes subtask boundaries and action descriptions with an open 9B language model. Trained on one robot (YAM), it transfers <span class="hl">zero-shot to AgiBot G1 and human hands</span>, beats frontier video models at locating boundaries on robot data, and costs <span class="hl">thousands of times less</span> per demonstration. The same tokenizer also tracks task progress and notices when an action is undone.</p>
       <details class="abs-more"><summary>Read the abstract</summary><p>Segmenting robot demonstration data into disjoint temporal and semantic subsegments is valuable for learning, cleaning, retrieval, and analysis. Segmentation is often performed manually in a tedious and error-prone process. Multimodal Large Language Models (MLLMs) have the potential to automate this process, but directly ingesting raw multi-camera video streams into MLLMs can be costly and can quickly exhaust context windows. We introduce <strong>KiRoSe</strong> (<strong>Ki</strong>nematics for <strong>Ro</strong>bot <strong>Se</strong>gmentation), a framework that focuses on the companion stream of robot kinematic data. Inspired by classical entropy coding such as Huffman coding, where frequent symbols get compact codes, we propose <strong>Sparse Motion Tokens (SMTs)</strong>, a discrete kinematic vocabulary that compactly represents recurring, temporally localized motion patterns, which we call <em>kinematic events</em>. SMTs are learned by encoding kinematic trajectories with temporal-segment supervision and quantizing the resulting features. We use increasingly available robot demonstration subtask annotations to supervise an open language model to interpret the resulting token sequences. Evaluation against human-labeled segmentation shows that KiRoSe substantially outperforms baseline segmentation methods in F1 quality and transfers zero-shot to unseen robot embodiments and egocentric human motion, while preserving the language model's open-vocabulary knowledge. Beyond segmentation, the same frozen representation supports progress estimation: a small head trained only on YAM tracks task progress zero-shot on an unseen robot and detects when an action is being undone.</p></details>
     </div>
+  </div>
+</section>
+
+<section id="models">
+  <div class="container">
+    <h2 class="section-title">Open Models</h2>
+    <p class="section-intro">Three models are released with loading code: the motion tokenizer, the 9B reader that writes timed event descriptions, and the progress head. KiRoSe matches or beats video models at locating subtask boundaries, at a fraction of the cost per demonstration.</p>
+    <div class="teaser-grid two">
+      <div class="code-card">
+        <div class="card-title">Download and run</div>
+        <pre class="code"><code><span class="c-k">from</span> transformers <span class="c-k">import</span> AutoModel
+<span class="c-k">from</span> vllm <span class="c-k">import</span> LLM, SamplingParams
+
+smt = AutoModel.from_pretrained(<span class="c-s">"sy-xie/KiRoSe-SMT"</span>, trust_remote_code=<span class="c-k">True</span>)
+enc = smt.encode(kin, t)   <span class="c-c"># (T, 14) end-effector rates at ~30 Hz, t in seconds</span>
+
+reader = LLM(<span class="c-s">"sy-xie/KiRoSe-Reader"</span>, dtype=<span class="c-s">"bfloat16"</span>, max_model_len=<span class="c-n">8192</span>,
+             limit_mm_per_prompt={<span class="c-s">"image"</span>: <span class="c-n">0</span>, <span class="c-s">"video"</span>: <span class="c-n">0</span>})
+params = SamplingParams(temperature=<span class="c-n">0</span>, max_tokens=<span class="c-n">4096</span>, logit_bias=smt.motion_logit_bias())
+out = reader.generate([smt.reader_prompt(enc, <span class="c-s">"Toast bread"</span>)], params)
+
+events = smt.parse_segments(out[<span class="c-n">0</span>].outputs[<span class="c-n">0</span>].text, duration=enc.duration)
+<span class="c-c"># [{"start": 0.1, "end": 7.4, "description": "Pick up the bread ..."}, ...]</span>
+progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span class="c-n">13.6</span>)   <span class="c-c"># dense progress for one event</span></code></pre>
+        <div class="model-chips">
+          <a href="https://huggingface.co/sy-xie/KiRoSe-SMT" target="_blank" rel="noreferrer"><b>KiRoSe-SMT</b><span>motion tokenizer · 2.8M</span></a>
+          <a href="https://huggingface.co/sy-xie/KiRoSe-Reader" target="_blank" rel="noreferrer"><b>KiRoSe-Reader</b><span>event writer · 9B</span></a>
+          <a href="https://huggingface.co/sy-xie/KiRoSe-Progress" target="_blank" rel="noreferrer"><b>KiRoSe-Progress</b><span>progress head · 68k</span></a>
+        </div>
+      </div>
+      <div class="cost-card">
+        <div class="card-title">Accuracy vs. cost per demonstration</div>
+        <svg id="costPlot" viewBox="0 0 380 430" role="img" aria-label="Boundary F1 within one second versus cost per trajectory on a log scale, on 50 held-out YAM and 20 AgiBot episodes. KiRoSe: 0.67 and 0.77 at about 0.0002 dollars per trajectory. Flora: 0.58 and 0.77 at about 0.008 dollars. Claude Opus 5.5: 0.50 and 0.67 at 0.33 dollars. GPT-6 Astra: 0.60 and 0.54 at 1.01 dollars."></svg>
+        <div class="cost-legend"><span><i class="dot-f"></i>YAM, 50 held-out episodes</span><span><i class="dot-o"></i>AgiBot G1, 20 episodes (zero-shot for KiRoSe)</span></div>
+      </div>
+    </div>
+
+    <p class="caption caption-wide">Right: boundary F1 within ±1&nbsp;s against cost per trajectory on 50 held-out YAM and 20 AgiBot episodes. KiRoSe runs on one H200 at $3.50 per GPU-hour. Flora&rsquo;s cost is its own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to $3.50 per GPU-hour, and its YAM point uses all three camera views. GPT-6 Astra and Claude Opus 5.5 are priced at their API rates.</p>
   </div>
 </section>
 
@@ -838,6 +823,7 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
 (function () {
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (id) { return document.getElementById(id); };
+  if (!$('liveVid')) return;
   var vid = $('liveVid'), desc = $('liveDesc'), who = $('liveWho'), chip = $('liveChip'), laneGt = $('laneGt'), laneKr = $('laneKr');
   var head = $('liveHead'), task = $('liveTask'), dots = $('liveDots'), evList = $('evList'), evInstr = $('evInstr');
   function mmss(x) { var m = Math.floor(x / 60), s = x - 60 * m; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); }
