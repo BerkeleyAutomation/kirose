@@ -129,7 +129,6 @@ h1,h2,h3{line-height:1.2;letter-spacing:-.02em;text-wrap:balance}
 .tab{font-family:var(--font);font-size:.9rem;font-weight:600;padding:8px 16px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);cursor:pointer;transition:border-color .15s ease,color .15s ease}
 .tab:hover{border-color:var(--accent);color:var(--text)}
 .tab[aria-selected="true"]{background:var(--accent-grad);color:#fff;border-color:transparent}
-.gallery-frame{max-height:780px;overflow-y:auto}
 
 .findings{list-style:none;padding:0;margin:0 auto;counter-reset:f;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .findings li:last-child:nth-child(odd){grid-column:1/-1}
@@ -327,7 +326,6 @@ section.tight{padding-block:48px}
     <li><a href="#data"><span class="dot"></span><span class="lbl">Data</span></a></li>
     <li><a href="#results"><span class="dot"></span><span class="lbl">Segmentation</span></a></li>
     <li><a href="#transfer"><span class="dot"></span><span class="lbl">Cross-Embodiment</span></a></li>
-    <li><a href="#examples"><span class="dot"></span><span class="lbl">Examples</span></a></li>
     <li><a href="#progress"><span class="dot"></span><span class="lbl">Progress</span></a></li>
     <li><a href="#findings"><span class="dot"></span><span class="lbl">Key Findings</span></a></li>
     <li><a href="#bibtex"><span class="dot"></span><span class="lbl">BibTeX</span></a></li>
@@ -385,7 +383,7 @@ section.tight{padding-block:48px}
       <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
       <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
       <a class="btn disabled" href="#" aria-disabled="true" title="Released with the arXiv version"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
-      <a class="btn" href="#examples"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Examples</span></a>
+      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
     </div>
   </div>
 </section>
@@ -591,23 +589,7 @@ section.tight{padding-block:48px}
   </div>
 </section>
 
-<section id="examples">
-  <div class="container">
-    <h2 class="section-title">Segmentation Examples</h2>
-    <p class="section-intro">Keyframes, ground truth, KiRoSe and the zero-shot video baseline on the same timeline, colored by leading verb.</p>
-    <div class="tabs" role="tablist" aria-label="Embodiment">
-      <button class="tab" role="tab" id="tab-agibot" aria-selected="true" aria-controls="gallery" data-img="static/images/app_seg_agibot.png" data-cap="AgiBot World, zero-shot embodiment transfer. Neither the tokenizer nor the reader sees AgiBot data, yet KiRoSe places boundaries at the grasp and release events of each pick–place cycle and reaches Boundary F1 ±1 s of 0.73–0.78 on all five episodes, above the video baseline on each (0.00–0.57). Descriptions transfer at the level of actions while object names follow YAM phrasing.">AgiBot G1 (zero-shot)</button>
-      <button class="tab" role="tab" id="tab-yam" aria-selected="false" aria-controls="gallery" data-img="static/images/app_seg_yam.png" data-cap="YAM, held-out tasks from ABC-130K. The zero-shot video model tends to emit a few coarse segments that restate the instruction, whereas KiRoSe recovers the repeated grasp–place, flatten–fold and insert cycles of the reference from kinematics alone. Its Boundary F1 ±1 s exceeds the video baseline on all five episodes (0.44–0.72 versus 0.07–0.38).">YAM (held-out tasks)</button>
-      <button class="tab" role="tab" id="tab-human" aria-selected="false" aria-controls="gallery" data-img="static/images/app_seg_human.png" data-cap="Ego-Exo4D human hands, zero-shot. Overlays show the hand joints used to build the shared input: the wrist for linear velocity, the wrist-to-knuckle fan for the palm frame and angular velocity, and the thumb–index line for aperture.">Human hands (zero-shot)</button>
-    </div>
-    <figure style="margin:0" id="gallery" role="tabpanel" aria-labelledby="tab-agibot">
-      <div class="teaser-wrap pad gallery-frame"><img id="gallery-img" src="static/images/app_seg_agibot.png" alt="Segmentation timelines with keyframes for five episodes" loading="lazy"></div>
-      <figcaption class="caption caption-wide" id="gallery-cap">AgiBot World, zero-shot embodiment transfer. Neither the tokenizer nor the reader sees AgiBot data, yet KiRoSe places boundaries at the grasp and release events of each pick–place cycle and reaches Boundary F1 ±1 s of 0.73–0.78 on all five episodes, above the video baseline on each (0.00–0.57). Descriptions transfer at the level of actions while object names follow YAM phrasing.</figcaption>
-    </figure>
-  </div>
-</section>
-
-<section class="band" id="progress">
+<section id="progress">
   <div class="container">
     <h2 class="section-title">Progress Estimation</h2>
     <p class="section-intro">A useful progress signal should rise while an action is executed and fall when it is undone. We play one AgiBot subtask backwards in place (video reversed, kinematic velocities negated) and check whether predicted progress follows.</p>
@@ -639,7 +621,7 @@ section.tight{padding-block:48px}
   </div>
 </section>
 
-<section id="findings">
+<section class="band" id="findings">
   <div class="container">
     <h2 class="section-title">Key Findings</h2>
     <ol class="findings">
@@ -685,16 +667,6 @@ section.tight{padding-block:48px}
     }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
     ids.forEach(function (id) { var el = document.getElementById(id); if (el) obs.observe(el); });
   }
-
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
-  var img = document.getElementById('gallery-img'), cap = document.getElementById('gallery-cap'), panel = document.getElementById('gallery');
-  tabs.forEach(function (t) {
-    t.addEventListener('click', function () {
-      tabs.forEach(function (o) { o.setAttribute('aria-selected', o === t ? 'true' : 'false'); });
-      img.src = t.dataset.img; cap.textContent = t.dataset.cap; panel.setAttribute('aria-labelledby', t.id);
-      panel.querySelector('.gallery-frame').scrollTop = 0;
-    });
-  });
 
   var btn = document.getElementById('copy-bib'), bib = document.getElementById('bib');
   btn.addEventListener('click', function () {
