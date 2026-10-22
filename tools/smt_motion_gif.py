@@ -1,6 +1,6 @@
 """Animated Figure 1: Sparse Motion Tokens by motion category, from real YAM eval video and the real SMT codes.
 Pairs come from tools/smt_pool.py (same category, different episodes, chosen for token overlap). Each panel stacks the two
-clips' token rows on one time axis. Tokens light up as the clips play; then the panel compares the rows: tokens in the
+clips' token rows on one time axis. Tokens light up as the clips play; as soon as a panel's clips end it compares the rows: tokens in the
 longest common subsequence (same codes, same order) are joined by lines and the shared sequence is spelled out.
 
   ~/traj_seg_vlm/.venv/bin/python tools/smt_motion_gif.py
@@ -68,15 +68,17 @@ def main():
         A, B = (c["seg"]["codes"] for c in cell["clips"])
         cell["pairs"] = lcs(A, B)
         cell["seq"] = dedup([A[x] for x, _ in cell["pairs"]])
-    T0 = max(len(c["frames"]) for cell in cells for c in cell["clips"]); T = T0 + HOLD
+    for cell in cells:                                                            # each panel compares as soon as its own clips end
+        cell["T0"] = max(len(c["frames"]) for c in cell["clips"])
+    T = max(cell["T0"] for cell in cells) + HOLD + FPS                            # last panel's comparison, then hold 1 s
     frames = []
     for i in range(T):
-        cmp_t = max(0, i - T0)                                                    # frames into the comparison phase
         im = Image.new("RGB", (W, H), BG); d = ImageDraw.Draw(im)
         d.text((40, 26), "Sparse Motion Tokens: recurring motion, recurring tokens", font=f(BOLD, 26), fill=INK)
         d.text((40, 62), "YAM robot · kinematics only · 2 tokens per second · 512-code vocabulary · lines join codes shared in the same order",
                font=f(FONT, 15), fill=DIM)
         for j, cell in enumerate(cells):
+            cmp_t = max(0, i - cell["T0"])                                        # frames into this panel's comparison
             x0, y0 = 40 + (j % 2) * 610, 98 + (j // 2) * 395
             d.rounded_rectangle((x0, y0, x0 + 590, y0 + 380), 12, fill=CARD, outline=RULE)
             d.text((x0 + 16, y0 + 12), LABEL[cell["cat"]], font=f(BOLD, 18), fill=INK)
