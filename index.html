@@ -322,6 +322,29 @@ section.tight{padding-block:48px}
 .two-col .caption{text-align:left}
 .hero.kfm h1.kfm-title{margin-bottom:22px}
 .kfm-btns{margin:0 0 52px}
+
+/* first section: event log, code, training-data video */
+.kfm-sub{max-width:760px;margin:-28px auto 30px;font-size:1.12rem;line-height:1.6;color:var(--text-dim);text-align:center;text-wrap:balance}
+.events-card,.code-card{min-width:0;display:flex;flex-direction:column}
+.ev-head{display:flex;gap:10px;align-items:baseline;font-weight:600;color:var(--text);padding:0 2px 10px;border-bottom:1px solid var(--border)}
+.ev-k,.ev-t{font-family:var(--mono);font-size:.72rem;color:var(--text-faint);letter-spacing:.04em}
+.ev-k{text-transform:uppercase;flex:0 0 auto}
+.ev-list{list-style:none;margin:0;padding:6px 0;flex:1 1 0;min-height:260px;max-height:420px;overflow-y:auto;scroll-behavior:smooth}
+.ev-list li{display:grid;grid-template-columns:7.2em minmax(0,1fr);gap:10px;padding:7px 8px;border-radius:8px;font-size:.92rem;line-height:1.4;color:var(--text-faint);transition:background .25s,color .25s}
+.ev-list li.done{color:var(--text-dim)}
+.ev-list li.on{background:var(--hl);color:var(--text);font-weight:600}
+.ev-list li.on .ev-t{color:var(--accent)}
+.ev-foot{font-size:.8rem;color:var(--text-faint);padding-top:10px;border-top:1px solid var(--border)}
+.use-row{margin-top:clamp(40px,5vw,64px)}
+pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;overflow-x:auto;font-family:var(--mono);font-size:.78rem;line-height:1.7;color:var(--text)}
+.c-k{color:#7c3aed}.c-s{color:#0e7a5f}.c-n{color:#c2410c}.c-c{color:var(--text-faint)}
+.model-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+@media (max-width:560px){.model-chips{grid-template-columns:minmax(0,1fr)}}
+.model-chips a{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);color:var(--text)}
+.model-chips a:hover{border-color:var(--accent)}
+.model-chips b{font-size:.86rem}.model-chips span{font-size:.74rem;color:var(--text-faint)}
+.data-video{margin:clamp(40px,5vw,64px) 0 0;text-align:left}
+.data-video video{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:16/9;border-radius:14px;border:1px solid var(--border);background:var(--bg)}
 </style>
 </head>
 <body>
@@ -358,9 +381,10 @@ section.tight{padding-block:48px}
       <a class="btn" href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
       <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
     </div>
+    <p class="kfm-sub">An open model you can download and run. Give it a robot&rsquo;s end-effector motion and it describes every event in the demonstration, with start and end times.</p>
     <div class="teaser-grid two">
       <div class="live-card">
-        <div class="card-title">Segmentation from kinematics alone</div>
+        <div class="card-title">Robot motion in, timed events out</div>
         <div class="live-stage">
           <video id="liveVid" muted playsinline preload="auto"></video>
           <span class="live-chip" id="liveChip">AgiBot G1</span>
@@ -373,13 +397,51 @@ section.tight{padding-block:48px}
         </div>
         <div class="live-meta"><span id="liveTask">&nbsp;</span><span id="liveDots" class="live-dots"></span></div>
       </div>
+      <div class="events-card">
+        <div class="card-title">KiRoSe output</div>
+        <div class="ev-head"><span class="ev-k">instruction</span><span id="evInstr">&nbsp;</span></div>
+        <ol class="ev-list" id="evList" aria-live="off"></ol>
+        <div class="ev-foot">Read from kinematics only: 2 motion tokens per second, no camera input. The video is shown for reference.</div>
+      </div>
+    </div>
+
+    <div class="teaser-grid two use-row">
+      <div class="code-card">
+        <div class="card-title">Download and run</div>
+        <pre class="code"><code><span class="c-k">from</span> transformers <span class="c-k">import</span> AutoModel
+<span class="c-k">from</span> vllm <span class="c-k">import</span> LLM, SamplingParams
+
+smt = AutoModel.from_pretrained(<span class="c-s">"sy-xie/KiRoSe-SMT"</span>, trust_remote_code=<span class="c-k">True</span>)
+enc = smt.encode(kin, t)   <span class="c-c"># (T, 14) end-effector rates at ~30 Hz, t in seconds</span>
+
+reader = LLM(<span class="c-s">"sy-xie/KiRoSe-Reader"</span>, dtype=<span class="c-s">"bfloat16"</span>, max_model_len=<span class="c-n">8192</span>,
+             limit_mm_per_prompt={<span class="c-s">"image"</span>: <span class="c-n">0</span>, <span class="c-s">"video"</span>: <span class="c-n">0</span>})
+params = SamplingParams(temperature=<span class="c-n">0</span>, max_tokens=<span class="c-n">4096</span>, logit_bias=smt.motion_logit_bias())
+out = reader.generate([smt.reader_prompt(enc, <span class="c-s">"Toast bread"</span>)], params)
+
+events = smt.parse_segments(out[<span class="c-n">0</span>].outputs[<span class="c-n">0</span>].text, duration=enc.duration)
+<span class="c-c"># [{"start": 0.1, "end": 7.4, "description": "Pick up the bread ..."}, ...]</span>
+progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span class="c-n">13.6</span>)   <span class="c-c"># dense progress for one event</span></code></pre>
+        <div class="model-chips">
+          <a href="https://huggingface.co/sy-xie/KiRoSe-SMT" target="_blank" rel="noreferrer"><b>KiRoSe-SMT</b><span>motion tokenizer · 2.8M</span></a>
+          <a href="https://huggingface.co/sy-xie/KiRoSe-Reader" target="_blank" rel="noreferrer"><b>KiRoSe-Reader</b><span>event writer · 9B</span></a>
+          <a href="https://huggingface.co/sy-xie/KiRoSe-Progress" target="_blank" rel="noreferrer"><b>KiRoSe-Progress</b><span>progress head · 68k</span></a>
+        </div>
+      </div>
       <div class="cost-card">
         <div class="card-title">Accuracy vs. cost per demonstration</div>
         <svg id="costPlot" viewBox="0 0 380 430" role="img" aria-label="Boundary F1 within one second versus cost per trajectory on a log scale, on 50 held-out YAM and 20 AgiBot episodes. KiRoSe: 0.67 and 0.77 at about 0.0002 dollars per trajectory. Flora: 0.58 and 0.77 at about 0.008 dollars. Claude Opus 5.5: 0.50 and 0.67 at 0.33 dollars. GPT-6 Astra: 0.60 and 0.54 at 1.01 dollars."></svg>
         <div class="cost-legend"><span><i class="dot-f"></i>YAM, 50 held-out episodes</span><span><i class="dot-o"></i>AgiBot G1, 20 episodes (zero-shot for KiRoSe)</span></div>
       </div>
     </div>
-    <p class="caption caption-wide"><strong>Segmentation from kinematics, at a fraction of the cost.</strong> Left: KiRoSe on held-out YAM, zero-shot AgiBot G1 and zero-shot human-hand episodes. It reads only end-effector motion (the video is for reference) and writes timed subtasks with action descriptions. Right: boundary F1 within ±1&nbsp;s against cost per trajectory on the same 50 YAM and 20 AgiBot episodes. KiRoSe runs on one H200 at $3.50 per GPU-hour. Flora is NVIDIA&rsquo;s open video segmenter: its YAM point uses all three camera views, and its cost is Flora&rsquo;s own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to $3.50 per GPU-hour. GPT-6 Astra and Claude Opus 5.5 are priced at their API rates.</p>
+
+    <figure class="data-video">
+      <video id="dataVid" muted loop playsinline preload="metadata" poster="static/media/train_data_poster.png" aria-label="Animated summary of the YAM training data: 5,478 episodes, 264 hours, 140 tasks, 145,524 timed events and 83 verbs">
+        <source src="static/media/train_data.webm" type="video/webm"><source src="static/media/train_data.mp4" type="video/mp4">
+      </video>
+    </figure>
+
+    <p class="caption caption-wide"><strong>A downloadable model that annotates robot data.</strong> Top: KiRoSe on held-out YAM, zero-shot AgiBot G1 and zero-shot human-hand episodes. It reads only end-effector motion and writes each event with its start and end time; the list on the right is its actual output for the playing episode. Middle: the three released models and the code to run them; accuracy is boundary F1 within ±1&nbsp;s against cost per trajectory on 50 YAM and 20 AgiBot episodes, with KiRoSe on one H200 at $3.50 per GPU-hour, Flora&rsquo;s own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to the same rate, and GPT-6 Astra and Claude Opus 5.5 at API prices. Bottom: the training data, 264 hours of one bimanual robot (YAM, ABC-130K) with every subtask annotated in time.</p>
   </div>
 </header>
 
@@ -777,7 +839,16 @@ section.tight{padding-block:48px}
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (id) { return document.getElementById(id); };
   var vid = $('liveVid'), desc = $('liveDesc'), who = $('liveWho'), chip = $('liveChip'), laneGt = $('laneGt'), laneKr = $('laneKr');
-  var head = $('liveHead'), task = $('liveTask'), dots = $('liveDots');
+  var head = $('liveHead'), task = $('liveTask'), dots = $('liveDots'), evList = $('evList'), evInstr = $('evInstr');
+  function mmss(x) { var m = Math.floor(x / 60), s = x - 60 * m; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); }
+  function events() {
+    evList.innerHTML = ''; evInstr.textContent = cur.instruction || cur.task;
+    cur.kirose.forEach(function (g) {
+      var li = document.createElement('li'), t = document.createElement('span'), d = document.createElement('span');
+      t.className = 'ev-t'; t.textContent = mmss(g.s) + '–' + mmss(g.e); d.textContent = (g.d || '').replace(/\.$/, '');
+      li.appendChild(t); li.appendChild(d); evList.appendChild(li);
+    });
+  }
   var list = [], k = 0, cur = null, started = 0, MAXWALL = 16000;
   function lane(el, segs, T, cls) {
     el.innerHTML = '';
@@ -795,7 +866,7 @@ section.tight{padding-block:48px}
         task.textContent = 'AgiBot G1 · “' + cur.subtask + '” · as recorded, then in reverse';
       } else {
         $('laneGtName').textContent = 'Annotation'; laneKr.parentNode.hidden = false;
-        lane(laneGt, cur.gt, cur.duration); lane(laneKr, cur.kirose, cur.duration);
+        lane(laneGt, cur.gt, cur.duration); lane(laneKr, cur.kirose, cur.duration); events();
         task.textContent = (cur.instruction || cur.task) + ' · boundary F1 ±1 s: ' + cur.f1.kirose.toFixed(2);
       }
       head.style.left = laneGt.offsetLeft + 'px';
@@ -818,6 +889,10 @@ section.tight{padding-block:48px}
       var seg = null; cur.kirose.forEach(function (g) { if (t >= g.s && t < g.e) seg = g; });
       who.textContent = 'KiRoSe'; desc.textContent = seg && seg.d ? seg.d.replace(/\.$/, '') : '…';
       Array.prototype.forEach.call(laneKr.children, function (el, i) { el.className = cur.kirose[i] === seg ? 'on' : ''; });
+      Array.prototype.forEach.call(evList.children, function (el, i) {
+        var g = cur.kirose[i], c = g === seg ? 'on' : (t >= g.e ? 'done' : '');
+        if (el.className !== c) { el.className = c; if (c === 'on') evList.scrollTop = Math.max(0, el.offsetTop - evList.offsetTop - evList.clientHeight / 3); }
+      });
     }
     if (!reduce && cur.kind !== 'reverse' && Date.now() - started > MAXWALL) load(k + 1);
   });
@@ -968,6 +1043,16 @@ section.tight{padding-block:48px}
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { TOK.forEach(function (t) { t.chip.classList.add('on'); }); show(9); return; }
   var o = START; reset(); show(o);
   setInterval(function () { o += 1; if (o > END + 4) { o = START; reset(); } if (o <= END) show(o); }, 520);
+})();
+</script>
+<script>
+/* Training-data video: play while on screen. */
+(function () {
+  var v = document.getElementById('dataVid');
+  if (!v || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  var play = function () { var p = v.play(); if (p && p.catch) p.catch(function () {}); };
+  if (!('IntersectionObserver' in window)) { play(); return; }
+  new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) play(); else v.pause(); }); }, { threshold: 0.25 }).observe(v);
 })();
 </script>
 </body>
