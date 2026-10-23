@@ -379,12 +379,11 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 <nav class="sidenav" aria-label="Section navigation">
   <ul>
     <li><a href="#smt"><span class="dot"></span><span class="lbl">Motion Tokens</span></a></li>
-    <li><a href="#capabilities"><span class="dot"></span><span class="lbl">Capabilities</span></a></li>
-    <li><a href="#videos"><span class="dot"></span><span class="lbl">Videos</span></a></li>
-    <li><a href="#method"><span class="dot"></span><span class="lbl">Method</span></a></li>
+    <li><a href="#method"><span class="dot"></span><span class="lbl">Architecture</span></a></li>
     <li><a href="#data"><span class="dot"></span><span class="lbl">Data</span></a></li>
-    <li><a href="#results"><span class="dot"></span><span class="lbl">Segmentation</span></a></li>
+    <li><a href="#results"><span class="dot"></span><span class="lbl">Segmentation Experiments</span></a></li>
     <li><a href="#transfer"><span class="dot"></span><span class="lbl">Cross-Embodiment</span></a></li>
+    <li><a href="#videos"><span class="dot"></span><span class="lbl">Video Examples</span></a></li>
     <li><a href="#progress"><span class="dot"></span><span class="lbl">Progress</span></a></li>
     <li><a href="#summary"><span class="dot"></span><span class="lbl">Summary</span></a></li>
     <li><a href="#bibtex"><span class="dot"></span><span class="lbl">BibTeX</span></a></li>
@@ -437,60 +436,9 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   </div>
 </section>
 
-<section id="capabilities">
-  <div class="container">
-    <h2 class="section-title">One tokenizer, several outputs</h2>
-    <p class="section-intro">A single frozen motion tokenizer feeds every output. Here it runs on an AgiBot G1 episode, a robot KiRoSe never saw in training.</p>
-    <div class="teaser-wrap pad"><img src="static/images/capabilities.png" alt="AgiBot toast-bread episode: reference video frames, arm-speed traces, a strip of 77 colored motion tokens, annotated versus KiRoSe subtask timelines with descriptions, and a progress curve that rises for the recorded subtask and falls when it is played in reverse" loading="lazy"></div>
-    <p class="caption caption-wide"><strong>Figure 2. What KiRoSe produces from kinematics alone.</strong> &#9312; End-effector kinematics (arm speeds shown; the video frames are for reference and are not an input). &#9313; Sparse Motion Tokens, 2 per second. &#9314; Subtask boundaries and action descriptions from the Qwen3.5-9B reader. KiRoSe names actions but not always objects (&ldquo;toast rack&rdquo; for the toaster), since object identity is visual. &#9315; A 68k-parameter progress head on the same tokenizer: progress rises as the boxed subtask is executed and falls when the same subtask is played in reverse. Across 2,586 AgiBot subtasks, progress falls on 86% of reversed ones.</p>
-    <div class="facts">
-      <div><b>0</b><span>cameras needed</span></div>
-      <div><b>2</b><span>tokens per second of motion</span></div>
-      <div><b>~$0.01</b><span>per hour of robot data, one H200</span></div>
-      <div><b>3</b><span>embodiments, 2 of them zero-shot</span></div>
-    </div>
-    <div class="feature-list suite">
-      <div class="feature-item"><h3>KiRoSe-SMT</h3><p>The motion tokenizer: a 2.76M-parameter transition-supervised encoder and a 512-code vocabulary. It maps any end-effector trajectory to discrete tokens and features.</p></div>
-      <div class="feature-item"><h3>KiRoSe-Reader</h3><p>Qwen3.5-9B with LoRA. It reads motion tokens and the task instruction and writes timed subtasks with action descriptions.</p></div>
-      <div class="feature-item"><h3>KiRoSe-Progress</h3><p>A 68k-parameter head on the tokenizer's features that outputs dense, signed task progress and detects when an action is being undone.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="band" id="videos">
-  <div class="container">
-    <h2 class="section-title">Segmentation Videos</h2>
-    <p class="section-intro">Pick an episode and press play. The lanes follow the video: the human annotation, KiRoSe reading kinematics only, and Qwen3.5-9B reading the video and instruction zero-shot. Click the timeline to jump.</p>
-    <div class="vgroups" role="group" aria-label="Embodiment" id="vgroups"></div>
-    <div class="eps" role="group" aria-label="Episodes" id="eps"></div>
-    <div class="vmain">
-      <div>
-        <div class="vstage"><video id="vid" muted playsinline preload="metadata"></video></div>
-        <div class="vctl">
-          <button id="vplay" type="button">Play</button>
-          <button id="vrate" type="button" aria-label="Playback speed">Speed 2×</button>
-          <span class="vclock" id="vclock">0.0 / 0.0 s</span>
-        </div>
-      </div>
-      <div class="vnow">
-        <div class="vinstr" id="vinstr"></div>
-        <div class="lane-now"><span class="who gt">Annotation</span><span class="desc" id="nGt"></span><span class="f1" id="cGt"></span><span class="span" id="sGt"></span></div>
-        <div class="lane-now"><span class="who kr">KiRoSe</span><span class="desc" id="nKr"></span><span class="f1" id="cKr"></span><span class="span" id="sKr"></span></div>
-        <div class="lane-now"><span class="who vl">Video VLM</span><span class="desc" id="nVl"></span><span class="f1" id="cVl"></span><span class="span" id="sVl"></span></div>
-      </div>
-    </div>
-    <div class="tl-wrap">
-      <div class="tl-head"><span id="tlTitle"></span><span>F1 = boundary F1 at ±1 s against the annotation</span></div>
-      <svg class="timeline" id="tl" tabindex="0" role="slider" aria-label="Timeline; arrow keys move 1 second" aria-valuemin="0"></svg>
-    </div>
-    <p class="vnote">Robot episodes are the paper's appendix examples followed by more chosen with the same rule: per task, the episode whose KiRoSe score is closest to that task's median. Videos play at the recorded 5 fps.</p>
-  </div>
-</section>
-
-
 <section id="method">
   <div class="container">
-    <h2 class="section-title">Method</h2>
+    <h2 class="section-title">Architecture</h2>
     <p class="section-intro">KiRoSe has two stages. A kinematic encoder is trained with subtask-transition supervision, and its features are pooled and quantized into Sparse Motion Tokens. The tokenizer is then frozen while a pretrained language model learns to read the tokens and write segments.</p>
     <figure class="method-figure">
       <div class="teaser-wrap"><img src="static/images/overview_with_token_ids.png" alt="KiRoSe pipeline: kinematic stream to transition-supervised encoder, temporal pooling and codebook quantization into motion tokens, then a language model that outputs timed action descriptions" loading="lazy"></div>
@@ -545,7 +493,7 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 
 <section id="results">
   <div class="container">
-    <h2 class="section-title">Trajectory Segmentation</h2>
+    <h2 class="section-title">Segmentation Experiments</h2>
     <p class="section-intro">Every kinematic tokenizer is paired with the same LoRA-adapted Qwen3.5-9B reader. Boundary F1 matches predicted and reference boundaries within a tolerance; Grounded F1 also requires the action description to agree.</p>
     <div class="two-col">
       <div class="result-table-block">
@@ -598,7 +546,37 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   </div>
 </section>
 
-<section id="progress">
+<section id="videos">
+  <div class="container">
+    <h2 class="section-title">Video Examples</h2>
+    <p class="section-intro">Pick an episode and press play. The lanes follow the video: the human annotation, KiRoSe reading kinematics only, and Qwen3.5-9B reading the video and instruction zero-shot. Click the timeline to jump.</p>
+    <div class="vgroups" role="group" aria-label="Embodiment" id="vgroups"></div>
+    <div class="eps" role="group" aria-label="Episodes" id="eps"></div>
+    <div class="vmain">
+      <div>
+        <div class="vstage"><video id="vid" muted playsinline preload="metadata"></video></div>
+        <div class="vctl">
+          <button id="vplay" type="button">Play</button>
+          <button id="vrate" type="button" aria-label="Playback speed">Speed 2×</button>
+          <span class="vclock" id="vclock">0.0 / 0.0 s</span>
+        </div>
+      </div>
+      <div class="vnow">
+        <div class="vinstr" id="vinstr"></div>
+        <div class="lane-now"><span class="who gt">Annotation</span><span class="desc" id="nGt"></span><span class="f1" id="cGt"></span><span class="span" id="sGt"></span></div>
+        <div class="lane-now"><span class="who kr">KiRoSe</span><span class="desc" id="nKr"></span><span class="f1" id="cKr"></span><span class="span" id="sKr"></span></div>
+        <div class="lane-now"><span class="who vl">Video VLM</span><span class="desc" id="nVl"></span><span class="f1" id="cVl"></span><span class="span" id="sVl"></span></div>
+      </div>
+    </div>
+    <div class="tl-wrap">
+      <div class="tl-head"><span id="tlTitle"></span><span>F1 = boundary F1 at ±1 s against the annotation</span></div>
+      <svg class="timeline" id="tl" tabindex="0" role="slider" aria-label="Timeline; arrow keys move 1 second" aria-valuemin="0"></svg>
+    </div>
+    <p class="vnote">Robot episodes are the paper's appendix examples followed by more chosen with the same rule: per task, the episode whose KiRoSe score is closest to that task's median. Videos play at the recorded 5 fps.</p>
+  </div>
+</section>
+
+<section class="band" id="progress">
   <div class="container">
     <h2 class="section-title">Progress Estimation</h2>
     <p class="section-intro">A useful progress signal should rise while an action is executed and fall when it is undone. We play one AgiBot subtask backwards in place (video reversed, kinematic velocities negated) and check whether predicted progress follows.</p>
@@ -630,14 +608,14 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   </div>
 </section>
 
-<section class="band" id="summary">
+<section id="summary">
   <div class="container">
     <h2 class="section-title">Summary</h2>
     <p class="section-intro">KiRoSe shows that a robot's own end-effector kinematics are enough to segment its demonstrations. Compressed into two Sparse Motion Tokens per second, kinematics locate subtask boundaries better than a zero-shot video model, and transition supervision raises Boundary F1 ±1 s from about 0.42 to 0.63. Because the tokens live in a shared end-effector space, a model trained only on YAM keeps most of its boundary accuracy on AgiBot G1 and runs on human hands, while its open-vocabulary reader writes task words it never saw in training. Motion supplies the action and vision the object: KiRoSe leads GPT-6 Astra on action-level Grounded F1 and trails it where descriptions need object names. The same frozen encoder also tells forward execution from an action being undone, which video reward models miss, all at a small fraction of the cost of video-based segmentation.</p>
   </div>
 </section>
 
-<section id="bibtex">
+<section class="band" id="bibtex">
   <div class="container">
     <h2 class="section-title">BibTeX</h2>
     <div class="bibtex-box">
