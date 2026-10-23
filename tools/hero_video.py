@@ -29,7 +29,7 @@ def f(p, s):
     return _FC[k]
 BG, INK, DIM, FAINT, RULE = (238, 238, 236), (24, 24, 27), (82, 82, 88), (132, 132, 138), (224, 224, 222)
 ACC, ORG, RED, TEAL, HL, PANEL = (52, 98, 238), (235, 104, 52), (214, 48, 49), (14, 150, 166), (234, 239, 253), (255, 255, 255)
-FLORA, OPUS, ASTRA = (194, 24, 122), (27, 175, 122), (235, 104, 52)
+FLORA, OPUS, ASTRA = (104, 160, 0), (217, 119, 87), (24, 24, 27)   # NVIDIA green, Claude orange, OpenAI black
 WHITE = (255, 255, 255)
 SCENES = [("title", 6.0), ("kinonly", 7.0), ("pipeline", 15.0), ("cost", 8.0), ("models", 6.5)]
 FADE = 0.4
