@@ -27,11 +27,11 @@ def f(p, s):
         else: fo = ImageFont.truetype(str(p), int(s * S))
         _FC[k] = fo
     return _FC[k]
-BG, INK, DIM, FAINT, RULE = (248, 248, 247), (24, 24, 27), (82, 82, 88), (132, 132, 138), (224, 224, 222)
+BG, INK, DIM, FAINT, RULE = (238, 238, 236), (24, 24, 27), (82, 82, 88), (132, 132, 138), (224, 224, 222)
 ACC, ORG, RED, TEAL, HL, PANEL = (52, 98, 238), (235, 104, 52), (214, 48, 49), (14, 150, 166), (234, 239, 253), (255, 255, 255)
 FLORA, OPUS, ASTRA = (194, 24, 122), (27, 175, 122), (235, 104, 52)
 WHITE = (255, 255, 255)
-SCENES = [("title", 6.0), ("kinonly", 7.0), ("pipeline", 15.0), ("cost", 7.5), ("models", 6.5)]
+SCENES = [("title", 6.0), ("kinonly", 7.0), ("pipeline", 15.0), ("cost", 8.0), ("models", 6.5)]
 FADE = 0.4
 EP = "655509"
 # six readable channels: linear speed, angular speed and gripper opening rate for each arm
@@ -57,6 +57,14 @@ def fit(img, w, h):                                   # cover-crop to w x h layo
 def paste_round(im, src, x, y, r=12):
     m = Image.new("L", src.size, 0); ImageDraw.Draw(m).rounded_rectangle((0, 0, src.width - 1, src.height - 1), radius=r * S, fill=255)
     im.paste(src, (int(x * S), int(y * S)), m)
+
+
+LOGOS = {}
+def paste_logo(im, name, x, y, size, alpha=1.0):
+    if name not in LOGOS: LOGOS[name] = Image.open(SITE / f"tools/logos/{name}.png").convert("RGBA")
+    lg = LOGOS[name].resize((int(size * S), int(size * S)), Image.LANCZOS)
+    if alpha < 1: lg.putalpha(lg.getchannel("A").point(lambda v: int(v * alpha)))
+    im.paste(lg, (int(x * S), int(y * S)), lg)
 
 
 def pill(d, x, y, s, bg, fg=WHITE, size=13, anchor="l"):
@@ -211,17 +219,21 @@ def s_cost(im, d, t, dur, D):
     line(d, [(L, B), (Rr, B)], fill=mix(BG, FAINT, a), width=S)
     T(d, ((L + Rr) / 2, B + 40), "Cost per demonstration (USD, log scale)", f(FONT, 16), mix(BG, DIM, a), "ma")
     T(d, (L - 70, (Tp + B) / 2), "Boundary F1 ±1 s", f(FONT, 16), mix(BG, DIM, a), "ma")
-    M = [("KiRoSe (ours)", ACC, 0.666, 0.772, 0.000156), ("Flora", FLORA, 0.583, 0.774, 0.0077),
-         ("Claude Opus 5.5", OPUS, 0.50, 0.67, 0.33), ("GPT-6 Astra", ASTRA, 0.60, 0.54, 1.01)]
-    for k, (n, col, yam, agi, c) in enumerate(M):
-        p = ease((t - 0.6 - 0.45 * k) / 0.5)
+    # most expensive first, then right to left down to KiRoSe; each model is labelled with its maker's logo
+    M = [("GPT-6 Astra", ASTRA, 0.60, 0.54, 1.01, "openai", "ra"), ("Claude Opus 5.5", OPUS, 0.50, 0.67, 0.33, "claude", "ra"),
+         ("Flora", FLORA, 0.583, 0.774, 0.0077, "nvidia", "la"), ("KiRoSe (ours)", ACC, 0.666, 0.772, 0.000156, "berkeley_seal", "la")]
+    for k, (n, col, yam, agi, c, logo, anc) in enumerate(M):
+        p = ease((t - 0.6 - 0.55 * k) / 0.5)
         if p <= 0: continue
         x, r = X(c), 11 * p
         d.ellipse(((x - r) * S, (Y(yam) - r) * S, (x + r) * S, (Y(yam) + r) * S), fill=col)
         d.ellipse(((x - r) * S, (Y(agi) - r) * S, (x + r) * S, (Y(agi) + r) * S), outline=col, width=4 * S, fill=BG)
-        top = max(yam, agi); lx = x + 18 if k < 2 else x - 18
-        T(d, (lx, Y(top) - 32 if k == 0 else Y(top) - 9), n, f(BOLD, 18), mix(BG, col, p), "la" if k < 2 else "ra")
-    q = ease((t - 2.8) / 0.6)
+        top = max(yam, agi); ly = Y(top) - 44 if k == 3 else Y(top) - 15; fo = f(BOLD, 18)
+        tw = d.textlength(n, font=fo) / S; lg = 30
+        lx = x + 18 if anc == "la" else x - 18 - tw - lg - 8      # [logo] name, beside the upper point
+        paste_logo(im, logo, lx, ly + 15 - lg / 2, lg, p)
+        T(d, (lx + lg + 8, ly + 3), n, fo, mix(BG, col, p))
+    q = ease((t - 3.2) / 0.6)
     if q > 0:                                          # cost brackets
         y = Tp - 8; x0, x1 = X(0.000156), X(0.0077)
         line(d, [(x0, y + 8), (x0, y), (x1, y), (x1, y + 8)], fill=mix(BG, FLORA, q), width=2 * S)

@@ -362,13 +362,23 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 .hero.paper .hero-logos img{height:clamp(26px,4.2vh,40px)}
 .hero.paper .btn-row{margin:0 0 clamp(12px,2.4vh,24px)}
 .intro-video{width:min(100%,1280px,calc((100svh - var(--intro-top,420px) - 20px) * 16 / 9));min-width:min(100%,560px)}
+/* first screen: title, authors, video; side nav appears after it; video progress bar shows on hover or tap */
+.sidenav{opacity:0;pointer-events:none;transition:opacity .25s ease}
+.sidenav.shown{opacity:1;pointer-events:auto}
+.intro-video{position:relative}
+.vbar{position:absolute;left:18px;right:18px;bottom:14px;height:6px;border-radius:3px;background:rgba(24,24,27,.14);cursor:pointer;opacity:0;transition:opacity .2s ease,height .15s ease}
+.vbar::before{content:"";position:absolute;inset:-10px 0}
+.vbar-fill{height:100%;width:0;border-radius:3px;background:#3462ee}
+.vbar .tick{position:absolute;top:0;bottom:0;width:2px;background:rgba(238,238,236,.95)}
+.intro-video:hover .vbar,.intro-video.show-bar .vbar,.vbar:focus-visible{opacity:1}
+.vbar:hover{height:9px}
+.abs-btns{margin-top:28px}
 </style>
 </head>
 <body>
 
 <nav class="sidenav" aria-label="Section navigation">
   <ul>
-    <li><a href="#top"><span class="dot"></span><span class="lbl">Overview</span></a></li>
     <li><a href="#abstract"><span class="dot"></span><span class="lbl">Abstract</span></a></li>
     <li><a href="#models"><span class="dot"></span><span class="lbl">Models</span></a></li>
     <li><a href="#smt"><span class="dot"></span><span class="lbl">Motion Tokens</span></a></li>
@@ -384,11 +394,6 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   </ul>
 </nav>
 
-<nav class="topbar" aria-label="Site">
-  <a class="tb-brand" href="#top">KiRoSe</a>
-  <div class="tb-links"><a href="#top">Home</a><a href="#abstract">Abstract</a><a href="#videos">Videos</a><a href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer">Models</a><a href="#bibtex">BibTeX</a></div>
-  <span class="tb-team">UC Berkeley · Toyota Research Institute</span>
-</nav>
 
 <header class="hero paper" id="top">
   <div class="container wide">
@@ -402,17 +407,11 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
       <span><a href="https://goldberg.berkeley.edu/" target="_blank" rel="noreferrer">Ken Goldberg</a><sup>1</sup></span>
     </div>
     <div class="affiliations"><span><sup>1</sup>University of California, Berkeley</span> &nbsp; <span><sup>2</sup>Toyota Research Institute</span></div>
-    <div class="hero-logos"><img src="static/images/logos/berkeley.png" alt="University of California, Berkeley"><img src="static/images/logos/tri.png" alt="Toyota Research Institute"></div>
-    <div class="btn-row kfm-btns">
-      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
-      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
-      <a class="btn" href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
-      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
-    </div>
     <figure class="intro-video">
       <video id="heroVid" autoplay muted loop playsinline preload="auto" poster="static/media/hero_poster.jpg" aria-label="Overview video: KiRoSe annotates robot demonstrations from kinematic state alone, without camera input; accuracy versus cost per demonstration; released models on Hugging Face">
         <source src="static/media/hero.webm" type="video/webm"><source src="static/media/hero.mp4" type="video/mp4">
       </video>
+      <div class="vbar" id="heroBar" role="slider" aria-label="Video progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><div class="vbar-fill"></div></div>
     </figure>
   </div>
 </header>
@@ -426,6 +425,12 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
   <div class="container">
     <h2 class="section-title">Abstract</h2>
     <p class="abstract-text">Segmenting robot demonstration data into disjoint temporal and semantic subsegments is valuable for learning, cleaning, retrieval, and analysis. Segmentation is often performed manually in a tedious and error-prone process. Multimodal Large Language Models (MLLMs) have the potential to automate this process, but directly ingesting raw multi-camera video streams into MLLMs can be costly and can quickly exhaust context windows. We introduce <strong>KiRoSe</strong> (<strong>Ki</strong>nematics for <strong>Ro</strong>bot <strong>Se</strong>gmentation), a framework that focuses on the companion stream of robot kinematic data. Inspired by classical entropy coding such as Huffman coding, where frequent symbols get compact codes, we propose <strong>Sparse Motion Tokens (SMTs)</strong>, a discrete kinematic vocabulary that compactly represents recurring, temporally localized motion patterns, which we call <em>kinematic events</em>. SMTs are learned by encoding kinematic trajectories with temporal-segment supervision and quantizing the resulting features. We use increasingly available robot demonstration subtask annotations to supervise an open language model to interpret the resulting token sequences. Evaluation against human-labeled segmentation shows that KiRoSe substantially outperforms baseline segmentation methods in F1 quality and transfers zero-shot to unseen robot embodiments and egocentric human motion, while preserving the language model's open-vocabulary knowledge. Beyond segmentation, the same frozen representation supports progress estimation: a small head trained only on YAM tracks task progress zero-shot on an unseen robot and detects when an action is being undone.</p>
+    <div class="btn-row abs-btns">
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
+      <a class="btn" href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
+      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
+    </div>
   </div>
 </section>
 
@@ -611,6 +616,7 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
           </table>
         </div>
         <p class="caption caption-wide">FAST, OAT and MotionGPT use their native 32-D joint-state input and a slightly larger training set, so the comparison is between complete tokenizer interfaces.</p>
+        <p class="caption caption-wide">The released checkpoint (<code>sy-xie/KiRoSe-Reader</code>) is a retrain on the same split with the location boilerplate removed from the training descriptions: the ABC-130K phrase "the center of the board" tags 38% of segments regardless of arm position. Its Boundary F1 is 0.47 / 0.63 / 0.70 on the held-out YAM tasks and 0.41 ±0.5 s on all 3,852 AgiBot episodes, and it no longer writes that phrase. The video examples below come from this checkpoint; the tables on this page report the paper model.</p>
       </div>
       <figure style="margin:0">
         <div class="teaser-wrap pad"><img src="static/images/token_efficiency_compact.png" alt="Boundary F1 at plus or minus 1 second as a function of motion-token rate for each tokenizer" loading="lazy"></div>
@@ -1056,6 +1062,26 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
   function fit() { document.documentElement.style.setProperty('--intro-top', (fig.getBoundingClientRect().top + window.scrollY) + 'px'); }
   fit(); window.addEventListener('resize', fit); window.addEventListener('load', fit);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+})();
+</script>
+<script>
+/* Side nav: visible from the abstract on. Intro video: progress bar with scene ticks, hidden until hover or tap; click or drag to seek. */
+(function () {
+  var nav = document.querySelector('.sidenav'), abs = document.getElementById('abstract');
+  if (nav && abs) { var upd = function () { nav.classList.toggle('shown', abs.getBoundingClientRect().top < window.innerHeight * 0.6); }; upd(); window.addEventListener('scroll', upd, { passive: true }); window.addEventListener('resize', upd); }
+  var v = document.getElementById('heroVid'), bar = document.getElementById('heroBar'); if (!v || !bar) return;
+  var fill = bar.firstElementChild, fig = bar.parentNode, hideT;
+  [6.0, 13.0, 28.0, 36.0].forEach(function (t) { var k = document.createElement('span'); k.className = 'tick'; k.dataset.t = t; bar.appendChild(k); });
+  function place() { if (!v.duration) return; Array.prototype.forEach.call(bar.querySelectorAll('.tick'), function (k) { k.style.left = (100 * k.dataset.t / v.duration) + '%'; }); }
+  v.addEventListener('loadedmetadata', place); place();
+  v.addEventListener('timeupdate', function () { if (!v.duration) return; var p = 100 * v.currentTime / v.duration; fill.style.width = p + '%'; bar.setAttribute('aria-valuenow', Math.round(p)); });
+  function seek(e) { var r = bar.getBoundingClientRect(); if (v.duration) v.currentTime = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 0.999) * v.duration; }
+  var drag = false;
+  bar.addEventListener('pointerdown', function (e) { drag = true; bar.setPointerCapture(e.pointerId); seek(e); e.preventDefault(); });
+  bar.addEventListener('pointermove', function (e) { if (drag) seek(e); });
+  bar.addEventListener('pointerup', function () { drag = false; });
+  bar.addEventListener('keydown', function (e) { if (!v.duration) return; if (e.key === 'ArrowRight') v.currentTime = Math.min(v.currentTime + 5, v.duration - 0.05); if (e.key === 'ArrowLeft') v.currentTime = Math.max(v.currentTime - 5, 0); });
+  fig.addEventListener('touchstart', function () { fig.classList.add('show-bar'); clearTimeout(hideT); hideT = setTimeout(function () { fig.classList.remove('show-bar'); }, 3000); }, { passive: true });
 })();
 </script>
 </body>
