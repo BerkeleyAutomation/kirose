@@ -372,15 +372,12 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 .vbar .tick{position:absolute;top:0;bottom:0;width:2px;background:rgba(238,238,236,.95)}
 .intro-video:hover .vbar,.intro-video.show-bar .vbar,.vbar:focus-visible{opacity:1}
 .vbar:hover{height:9px}
-.abs-btns{margin-top:28px}
 </style>
 </head>
 <body>
 
 <nav class="sidenav" aria-label="Section navigation">
   <ul>
-    <li><a href="#abstract"><span class="dot"></span><span class="lbl">Abstract</span></a></li>
-    <li><a href="#models"><span class="dot"></span><span class="lbl">Models</span></a></li>
     <li><a href="#smt"><span class="dot"></span><span class="lbl">Motion Tokens</span></a></li>
     <li><a href="#capabilities"><span class="dot"></span><span class="lbl">Capabilities</span></a></li>
     <li><a href="#videos"><span class="dot"></span><span class="lbl">Videos</span></a></li>
@@ -407,6 +404,12 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
       <span><a href="https://goldberg.berkeley.edu/" target="_blank" rel="noreferrer">Ken Goldberg</a><sup>1</sup></span>
     </div>
     <div class="affiliations"><span><sup>1</sup>University of California, Berkeley</span> &nbsp; <span><sup>2</sup>Toyota Research Institute</span></div>
+    <div class="btn-row kfm-btns">
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
+      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
+      <a class="btn" href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
+      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
+    </div>
     <figure class="intro-video">
       <video id="heroVid" autoplay muted loop playsinline preload="auto" poster="static/media/hero_poster.jpg" aria-label="Overview video: KiRoSe annotates robot demonstrations from kinematic state alone, without camera input; accuracy versus cost per demonstration; released models on Hugging Face">
         <source src="static/media/hero.webm" type="video/webm"><source src="static/media/hero.mp4" type="video/mp4">
@@ -420,57 +423,6 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
 
 
 
-
-<section class="tight" id="abstract">
-  <div class="container">
-    <h2 class="section-title">Abstract</h2>
-    <p class="abstract-text">Segmenting robot demonstration data into disjoint temporal and semantic subsegments is valuable for learning, cleaning, retrieval, and analysis. Segmentation is often performed manually in a tedious and error-prone process. Multimodal Large Language Models (MLLMs) have the potential to automate this process, but directly ingesting raw multi-camera video streams into MLLMs can be costly and can quickly exhaust context windows. We introduce <strong>KiRoSe</strong> (<strong>Ki</strong>nematics for <strong>Ro</strong>bot <strong>Se</strong>gmentation), a framework that focuses on the companion stream of robot kinematic data. Inspired by classical entropy coding such as Huffman coding, where frequent symbols get compact codes, we propose <strong>Sparse Motion Tokens (SMTs)</strong>, a discrete kinematic vocabulary that compactly represents recurring, temporally localized motion patterns, which we call <em>kinematic events</em>. SMTs are learned by encoding kinematic trajectories with temporal-segment supervision and quantizing the resulting features. We use increasingly available robot demonstration subtask annotations to supervise an open language model to interpret the resulting token sequences. Evaluation against human-labeled segmentation shows that KiRoSe substantially outperforms baseline segmentation methods in F1 quality and transfers zero-shot to unseen robot embodiments and egocentric human motion, while preserving the language model's open-vocabulary knowledge. Beyond segmentation, the same frozen representation supports progress estimation: a small head trained only on YAM tracks task progress zero-shot on an unseen robot and detects when an action is being undone.</p>
-    <div class="btn-row abs-btns">
-      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8zm0 4h8v1.5H8zm0-8h4v1.5H8z"/></svg><span>Paper</span></a>
-      <a class="btn disabled" href="#" aria-disabled="true" title="Coming soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v2H3zM3 11h18v2H3zM3 18h12v2H3z"/></svg><span>arXiv</span></a>
-      <a class="btn" href="https://huggingface.co/collections/sy-xie/kirose-6ad95aa4a31c20b5aec06ca1" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm8 10V13.1l6-3.4v6.6z"/></svg><span>Models</span></a>
-      <a class="btn" href="#videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zm0 6h11v4H3zm13 0h5v4h-5zM3 17h7v2H3zm9 0h9v2h-9z"/></svg><span>Videos</span></a>
-    </div>
-  </div>
-</section>
-
-<section id="models">
-  <div class="container">
-    <h2 class="section-title">Open Models</h2>
-    <p class="section-intro">Three models are released with loading code: the motion tokenizer, the 9B reader that writes timed event descriptions, and the progress head. KiRoSe matches or beats video models at locating subtask boundaries, at a fraction of the cost per demonstration.</p>
-    <div class="teaser-grid two">
-      <div class="code-card">
-        <div class="card-title">Download and run</div>
-        <pre class="code"><code><span class="c-k">from</span> transformers <span class="c-k">import</span> AutoModel
-<span class="c-k">from</span> vllm <span class="c-k">import</span> LLM, SamplingParams
-
-smt = AutoModel.from_pretrained(<span class="c-s">"sy-xie/KiRoSe-SMT"</span>, trust_remote_code=<span class="c-k">True</span>)
-enc = smt.encode(kin, t)   <span class="c-c"># (T, 14) end-effector rates at ~30 Hz, t in seconds</span>
-
-reader = LLM(<span class="c-s">"sy-xie/KiRoSe-Reader"</span>, dtype=<span class="c-s">"bfloat16"</span>, max_model_len=<span class="c-n">8192</span>,
-             limit_mm_per_prompt={<span class="c-s">"image"</span>: <span class="c-n">0</span>, <span class="c-s">"video"</span>: <span class="c-n">0</span>})
-params = SamplingParams(temperature=<span class="c-n">0</span>, max_tokens=<span class="c-n">4096</span>, logit_bias=smt.motion_logit_bias())
-out = reader.generate([smt.reader_prompt(enc, <span class="c-s">"Toast bread"</span>)], params)
-
-events = smt.parse_segments(out[<span class="c-n">0</span>].outputs[<span class="c-n">0</span>].text, duration=enc.duration)
-<span class="c-c"># [{"start": 0.1, "end": 7.4, "description": "Pick up the bread ..."}, ...]</span>
-progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span class="c-n">13.6</span>)   <span class="c-c"># dense progress for one event</span></code></pre>
-        <div class="model-chips">
-          <a href="https://huggingface.co/sy-xie/KiRoSe-SMT" target="_blank" rel="noreferrer"><b>KiRoSe-SMT</b><span>motion tokenizer · 2.8M</span></a>
-          <a href="https://huggingface.co/sy-xie/KiRoSe-Reader" target="_blank" rel="noreferrer"><b>KiRoSe-Reader</b><span>event writer · 9B</span></a>
-          <a href="https://huggingface.co/sy-xie/KiRoSe-Progress" target="_blank" rel="noreferrer"><b>KiRoSe-Progress</b><span>progress head · 68k</span></a>
-        </div>
-      </div>
-      <div class="cost-card">
-        <div class="card-title">Accuracy vs. cost per demonstration</div>
-        <svg id="costPlot" viewBox="0 0 380 430" role="img" aria-label="Boundary F1 within one second versus cost per trajectory on a log scale, on 50 held-out YAM and 20 AgiBot episodes. KiRoSe: 0.67 and 0.77 at about 0.0002 dollars per trajectory. Flora: 0.58 and 0.77 at about 0.008 dollars. Claude Opus 5.5: 0.50 and 0.67 at 0.33 dollars. GPT-6 Astra: 0.60 and 0.54 at 1.01 dollars."></svg>
-        <div class="cost-legend"><span><i class="dot-f"></i>YAM, 50 held-out episodes</span><span><i class="dot-o"></i>AgiBot G1, 20 episodes (zero-shot for KiRoSe)</span></div>
-      </div>
-    </div>
-
-    <p class="caption caption-wide">Right: boundary F1 within ±1&nbsp;s against cost per trajectory on 50 held-out YAM and 20 AgiBot episodes. KiRoSe runs on one H200 at $3.50 per GPU-hour. Flora&rsquo;s cost is its own deployment estimate ($0.72 per video-hour at $10 per GPU-hour) re-priced to $3.50 per GPU-hour, and its YAM point uses all three camera views. GPT-6 Astra and Claude Opus 5.5 are priced at their API rates.</p>
-  </div>
-</section>
 
 <section class="band" id="smt">
   <!-- SMT concept figure -->
@@ -909,6 +861,7 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
 })();
 (function () {
   var NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('costPlot');
+  if (!svg) return;
   function el(t, a, txt) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
   var L = 50, R = 368, T = 40, B = 372, lo = Math.log10(6e-5), hi = Math.log10(3), ylo = 0.45, yhi = 0.80;
   var X = function (c) { return L + (R - L) * (Math.log10(c) - lo) / (hi - lo); }, Y = function (v) { return B - (B - T) * (v - ylo) / (yhi - ylo); };
@@ -1065,9 +1018,9 @@ progress = smt.progress(kin, t, start=<span class="c-n">7.4</span>, end=<span cl
 })();
 </script>
 <script>
-/* Side nav: visible from the abstract on. Intro video: progress bar with scene ticks, hidden until hover or tap; click or drag to seek. */
+/* Side nav: visible once the first screen is scrolled past. Intro video: progress bar with scene ticks, hidden until hover or tap; click or drag to seek. */
 (function () {
-  var nav = document.querySelector('.sidenav'), abs = document.getElementById('abstract');
+  var nav = document.querySelector('.sidenav'), abs = document.getElementById('smt');
   if (nav && abs) { var upd = function () { nav.classList.toggle('shown', abs.getBoundingClientRect().top < window.innerHeight * 0.6); }; upd(); window.addEventListener('scroll', upd, { passive: true }); window.addEventListener('resize', upd); }
   var v = document.getElementById('heroVid'), bar = document.getElementById('heroBar'); if (!v || !bar) return;
   var fill = bar.firstElementChild, fig = bar.parentNode, hideT;
