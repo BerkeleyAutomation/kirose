@@ -516,7 +516,7 @@ pre.code{margin:0;padding:18px 20px;background:var(--bg-elev);border:1px solid v
           </table>
         </div>
         <p class="caption caption-wide">FAST, OAT and MotionGPT use their native 32-D joint-state input and a slightly larger training set, so the comparison is between complete tokenizer interfaces.</p>
-        <p class="caption caption-wide">The released checkpoint (<code>sy-xie/KiRoSe-Reader</code>) is a retrain on the same split with the location boilerplate removed from the training descriptions: the ABC-130K phrase "the center of the board" tags 38% of segments regardless of arm position. Its Boundary F1 is 0.47 / 0.63 / 0.70 on the held-out YAM tasks and 0.41 ±0.5 s on all 3,852 AgiBot episodes, and it no longer writes that phrase. The video examples below come from this checkpoint; the tables on this page report the paper model.</p>
+        <p class="caption caption-wide">The released checkpoint (<code>sy-xie/KiRoSe-Reader</code>) is a retrain on the same split with the location boilerplate removed from the training descriptions: the ABC-130K phrase "the center of the board" tags 38% of segments regardless of arm position. Its Boundary F1 is 0.48 / 0.65 / 0.72 on the held-out YAM tasks and 0.40 / 0.62 / 0.76 on all 3,852 AgiBot episodes, and it names a location only when the task implies one. The video examples below come from this checkpoint; the tables on this page report the paper model.</p>
       </div>
       <figure style="margin:0">
         <div class="teaser-wrap pad"><img src="static/images/token_efficiency_compact.png" alt="Boundary F1 at plus or minus 1 second as a function of motion-token rate for each tokenizer" loading="lazy"></div>

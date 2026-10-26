@@ -93,16 +93,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--per", type=int, default=6)
     ap.add_argument("--handviewer", type=Path, required=True)
+    ap.add_argument("--run", default="20261023_langclean_v4a", help="runs_signed_reader subdir of the released KiRoSe reader")
     a = ap.parse_args()
     kf = TSV / "appendix_kf"
     pretty = lambda t: t.replace("_", " ").capitalize()
 
-    ag_ours = load(RUNS / "20260923_trainonly/preds_agibot_test.jsonl", RUNS / "20260923_trainonly/preds_agibot_ood.jsonl")
+    ag_ours = load(RUNS / a.run / "preds_agibot_test.jsonl", RUNS / a.run / "preds_agibot_ood.jsonl")
     ag_base = load(RUNS / "baseline_video_zeroshot/preds_agibot_test_evalset.jsonl", RUNS / "baseline_video_zeroshot/preds_agibot_ood.jsonl")
     agibot = robot("agibot", ag_ours, ag_base, kf / "picks_agibot.json", lambda e: TSV / f"data/agibot_video/{e}.mp4", a.per,
                    lambda o: o.get("instruction", ""))
 
-    yam_ours = load(RUNS / "20260923_trainonly/preds_yam_eval.jsonl")
+    yam_ours = load(RUNS / a.run / "preds_yam_eval.jsonl")
     yam_base = load(RUNS / "baseline_video_zeroshot/preds_yam_eval.jsonl")
     yam = robot("yam", yam_ours, yam_base, kf / "picks_yam.json", lambda e: TSV / f"proc/{yam_ours[e]['task']}/{e}/video.mp4", a.per,
                 lambda o: o.get("instruction") or pretty(o["task"]))
@@ -114,7 +115,7 @@ def main():
                           video=f"static/videos/human/{r['id']}.mp4", paper_figure=False,
                           gt=r["gt"], kirose=r["smt"], vlm=r["vlm"], f1=dict(kirose=r["f1"]["smt"], vlm=r["f1"]["vlm"])))
 
-    data = dict(note="KiRoSe = SMT reader trained on YAM only (runs_signed_reader/20260923_trainonly, long2 smt_correct for hands); "
+    data = dict(note=f"KiRoSe = SMT reader trained on YAM only (runs_signed_reader/{a.run}, the released checkpoint; long2 smt_correct for hands); "
                      "vlm = Qwen3.5-9B zero-shot on video + instruction; f1 = boundary F1 at +-1 s vs the annotation.",
                 groups=[dict(key="agibot", label="AgiBot G1", note="zero-shot embodiment", runs=agibot),
                         dict(key="yam", label="YAM", note="held-out tasks", runs=yam),

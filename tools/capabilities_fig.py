@@ -55,9 +55,9 @@ def frames(ep, times, out):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--ep", default="655509"); ap.add_argument("--split", default="test"); ap.add_argument("--unit", type=int, default=1)
+    ap = argparse.ArgumentParser(); ap.add_argument("--ep", default="655509"); ap.add_argument("--split", default="test"); ap.add_argument("--unit", type=int, default=1); ap.add_argument("--run", default="20261023_langclean_v4a")
     a = ap.parse_args()
-    rec = next(r for r in map(json.loads, open(ROOT / f"runs_signed_reader/20260923_trainonly/preds_agibot_{a.split}.jsonl")) if r["episode_id"] == a.ep)
+    rec = next(r for r in map(json.loads, open(ROOT / f"runs_signed_reader/{a.run}/preds_agibot_{a.split}.jsonl")) if r["episode_id"] == a.ep)
     codes = json.load(open(ROOT / f"kin_codes_signed_trainonly/{a.ep}.json"))
     gt = sorted(rec["gt_segments"], key=lambda s: s["start"]); pred = sorted(rec["pred_segments"], key=lambda s: s["start"]); T = rec["duration_s"]
     u = gt[a.unit]; tt, prog, kin, kt = progress(a.ep, f"agibot_{a.split}", u["start"], u["end"])

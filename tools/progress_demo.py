@@ -11,9 +11,9 @@ from capabilities_fig import progress, ROOT, SITE
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--ep", default="655509"); ap.add_argument("--split", default="test"); ap.add_argument("--unit", type=int, default=1)
+    ap = argparse.ArgumentParser(); ap.add_argument("--ep", default="655509"); ap.add_argument("--split", default="test"); ap.add_argument("--unit", type=int, default=1); ap.add_argument("--run", default="20261023_langclean_v4a")
     a = ap.parse_args()
-    rec = next(r for r in map(json.loads, open(ROOT / f"runs_signed_reader/20260923_trainonly/preds_agibot_{a.split}.jsonl")) if r["episode_id"] == a.ep)
+    rec = next(r for r in map(json.loads, open(ROOT / f"runs_signed_reader/{a.run}/preds_agibot_{a.split}.jsonl")) if r["episode_id"] == a.ep)
     u = sorted(rec["gt_segments"], key=lambda s: s["start"])[a.unit]
     tt, prog, _, _ = progress(a.ep, f"agibot_{a.split}", u["start"], u["end"])
     out = SITE / "static/media"; D = u["end"] - u["start"]
